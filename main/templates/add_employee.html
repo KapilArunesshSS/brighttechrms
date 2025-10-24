@@ -1,0 +1,233 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Profile</title>
+    <!-- Importing Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
+    <!-- MODIFICATION 1: Added styles for disabled fields -->
+    <style>
+        input:disabled, select:disabled, textarea:disabled {
+            background-color: #f1f5f9; /* slate-100 */
+            color: #64748b; /* slate-500 */
+            cursor: not-allowed;
+            border-color: #e2e8f0; /* slate-200 */
+        }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+    <div class="min-h-screen flex items-center justify-center py-12 px-4">
+
+        <!-- 
+          MODIFICATION 1:
+          Removed the permission check that was hiding this form from staff.
+          The form is now visible to all users (regular, staff, and superuser).
+        -->
+        
+        <div class="bg-white w-full max-w-2xl p-8 rounded-xl shadow-md space-y-8">
+
+            <!-- Form Header -->
+            <div class="text-left">
+                <h2 class="text-3xl font-bold text-gray-900">New Employee Registration</h2>
+                <p class="mt-2 text-md text-gray-600">
+                    Please fill in the details below to create a new employee profile.
+                </p>
+            </div>
+
+            <!-- New Employee Form -->
+            <form action="{% url 'add_employee' %}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                <!-- Full Name -->
+                 {% csrf_token %}
+                <div>
+                    <label for="name" class="block text-sm font-semibold text-gray-700">Full Name</label>
+                    <input type="text" id="name" name="name" placeholder="Enter full name" required
+                           class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition">
+                </div>
+                
+                <!-- Age -->
+                <div>
+                    <label for="age" class="block text-sm font-semibold text-gray-700">Age</label>
+                    <input type="number" id="age" name="age" min="18" max="100" placeholder="Enter age" required
+                           class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition">
+                </div>
+                <!-- Contact-->
+                <div>
+                    <label for="contact" class="block text-sm font-semibold text-gray-700">Contact Number</label>
+                    <input type="text" id="contact" name="contact" placeholder="Enter contact number" required
+                           class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
+                           pattern="[0-9]{10}" maxlength="10" title="Please enter a valid 10-digit contact number">
+                </div> <!-- MODIFICATION 2: Fixed missing closing </div> tag -->
+
+                <!-- Site -->
+                <div>
+                    <label for="company" class="block text-sm font-semibold text-gray-700">Site</label>
+                    <select id="company" name="company" required
+                            class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition">
+                        <option value="" disabled selected> -----> </option>
+                        <option value="BMM">BMM</option>
+                        <option value="SLR">SLR</option>
+                        <option value="ARJAS">ARJAS</option>
+                        <option value="JAIRAJ">JAIRAJ</option>
+                        <option value="MSSSL">MSSSL</option>
+                        <option value="AGNI">AGNI</option>
+                        <option value="COEGA">COEGA</option>
+                        <option value="CD TECH">CD TECH</option>
+                    </select>
+                </div>
+
+                <!-- Job Role -->
+                <div>
+                    <label for="role" class="block text-sm font-semibold text-gray-700">Designation</label>
+                    <select id="role" name="role" required
+                            class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition">
+                        <option value="" disabled selected> -----> </option>
+                        <optgroup label="BRIGHT BAR DIVISION - OPERATORS">
+                            <option value="PEELING OPERATOR">PEELING OPERATOR</option>
+                            <option value="REELING OPERATOR">REELING OPERATOR</option>
+                            <option value="CENTERLESS GRINDER">CENTERLESS GRINDER</option>
+                            <option value="BELT POLISH GRINDER">BELT POLISH GRINDER</option>
+                            <option value="BAND SAW CUTTING OPERATOR">BAND SAW CUTTING OPERATOR</option>
+                            <option value="EOT CRANE OPERATOR (BRIGHT BAR)">EOT CRANE OPERATOR</option>
+                        </optgroup>
+                        <optgroup label="BRIGHT BAR DIVISION - MAINTENANCE">
+                            <option value="SR MECHANICAL FITTER (BRIGHT BAR)">SR MECHANICAL FITTER</option>
+                            <option value="MECHANICAL FITTER (BRIGHT BAR)">MECHANICAL FITTER</option>
+                            <option value="SR ELECTRICAL TECHNICIAN (BRIGHT BAR)">SR ELECTRICAL TECHNICIAN</option>
+                            <option value="ELECTRICIAN (BRIGHT BAR)">ELECTRICIAN</option>
+                            <option value="CRANE MAINTENANCE FITTER (BRIGHT BAR)">CRANE MAINTENANCE FITTER</option>
+                        </optgroup>
+                        <optgroup label="BRIGHT BAR DIVISION - HEAT TREATMENT">
+                            <option value="FURNACE OPERATOR (BRIGHT BAR)">FURNACE OPERATOR</option>
+                        </optgroup>
+                        <optgroup label="BRIGHT BAR DIVISION - PICKLING PLANT">
+                            <option value="MAINTENANCE FITTER (PICKLING)">MAINTENANCE FITTER</option>
+                            <option value="UTILITY / PUMP OPERATOR (PICKLING)">UTILITY / PUMP OPERATOR</option>
+                        </optgroup>
+                        <optgroup label="ROLLING MILL - TMT MILL OPERATION">
+                            <option value="MILL FITTER (TMT)">MILL FITTER</option>
+                            <option value="GAS CUTTER (TMT)">GAS CUTTER</option>
+                            <option value="ASSISTANT MILL FITTER (TMT)">ASSISTANT MILL FITTER</option>
+                            <option value="ROUGHING MILL FITTER (TMT)">ROUGHING MILL FITTER</option>
+                            <option value="FINISHING MILL FITTER (TMT)">FINISHING MILL FITTER</option>
+                        </optgroup>
+                        <optgroup label="ROLLING MILL - BAR MILL OPERATION">
+                            <option value="MILL FITTER (BAR)">MILL FITTER</option>
+                            <option value="GAS CUTTER (BAR)">GAS CUTTER</option>
+                            <option value="ASSISTANT MILL FITTER (BAR)">ASSISTANT MILL FITTER</option>
+                            <option value="ROUGHING MILL FITTER (BAR)">ROUGHING MILL FITTER</option>
+                        </optgroup>
+                        <optgroup label="ROLLING MILL - ROLL SHOP / GUIDE SHOP">
+                            <option value="ROLL ASSEMBLY FITTER">ROLL ASSEMBLY FITTER</option>
+                            <option value="ABST ROLL ASSEMBLY FITTER">ABST ROLL ASSEMBLY FITTER</option>
+                            <option value="SR ROLL ASSEMBLY FITTER">SR ROLL ASSEMBLY FITTER</option>
+                            <option value="SR GUIDE FITTER">SR GUIDE FITTER</option>
+                            <option value="GUIDE FITTER">GUIDE FITTER</option>
+                            <option value="STAND MAINTENANCE FITTER">STAND MAINTENANCE FITTER</option>
+                        </optgroup>
+                        <optgroup label="ROLLING MILL - MECHANICAL">
+                            <option value="FITTER (ROLLING MILL)">FITTER</option>
+                            <option value="SR FITTER (ROLLING MILL)">SR FITTER</option>
+                            <option value="ASSISTANT FITTER (ROLLING MILL)">ASSISTANT FITTER</option>
+                            <option value="WELDER (ROLLING MILL)">WELDER</option>
+                            <option value="CRANE MAINTENANCE FITTER (ROLLING MILL)">CRANE MAINTENANCE FITTER</option>
+                            <option value="HYDRAULIC FITTER (ROLLING MILL)">HYDRAULIC FITTER</option>
+                            <option value="UTILITY FITTER (ROLLING MILL)">UTILITY FITTER</option>
+                            <option value="FABRICATION FITTER (ROLLING MILL)">FABRICATION FITTER</option>
+                        </optgroup>
+                        <optgroup label="ROLLING MILL - ELECTRICAL">
+                            <option value="SR ELECTRICIAN (ROLLING MILL)">SR ELECTRICIAN</option>
+                            <option value="INSTRUMENT TECHNICIAN">INSTRUMENT TECHNICIAN</option>
+                            <option value="ELECTRICAL TECHNICIAN (ROLLING MILL)">ELECTRICAL TECHNICIAN</option>
+                            <option value="ELECTRICIAN (ROLLING MILL)">ELECTRICIAN</option>
+                            <option value="JR ELECTRICIAN (ROLLING MILL)">JR ELECTRICIAN</option>
+                        </optgroup>
+                        <optgroup label="ROLLING MILL - OPERATOR">
+                            <option value="UTILITY / PUMP OPERATOR (ROLLING MILL)">UTILITY / PUMP OPERATOR</option>
+                            <option value="HYDRAULIC OPERATOR">HYDRAULIC OPERATOR</option>
+                            <option value="MAIN PULPIT OPERATOR">MAIN PULPIT OPERATOR</option>
+                            <option value="BUNDLING DESK OPERATOR">BUNDLING DESK OPERATOR</option>
+                            <option value="LOCAL DESK OPERATOR">LOCAL DESK OPERATOR</option>
+                            <option value="COLD SHEAR OPERATOR">COLD SHEAR OPERATOR</option>
+                            <option value="FURNACE OPERATOR (ROLLING MILL)">FURNACE OPERATOR</option>
+                            <option value="PEEL BAR OPERATOR">PEEL BAR OPERATOR</option>
+                            <option value="EOT CRANE OPERATOR (ROLLING MILL)">EOT CRANE OPERATOR</option>
+                        </optgroup>
+                    </select>
+                </div>
+                
+                <!-- Application Status -->
+                <div>
+                    <label for="status" class="block text-sm font-semibold text-gray-700">Application Status</label>
+                    <select id="status" name="status" required
+                            class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
+                            {% if not user.is_staff %}disabled{% endif %}> 
+                            <!-- MODIFICATION 2: Disabled for regular users -->
+                        <option value="pending" selected>Pending</option>
+                        <option value="selected">Selected</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="offered">Offered</option>
+                        <option value="joined">Joined</option>
+                        <option value="Left">left</option>
+                    </select>
+                </div>
+
+                <!-- Upload Resume -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700">Upload Resume</label>
+                    <div class="mt-1">
+                        <label for="resume-upload" class="cursor-pointer bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Choose file
+                        </label>
+                        <input id="resume-upload" name="resume" type="file" class="hidden">
+                        <span id="file-chosen" class="ml-3 text-sm text-gray-500">No file chosen</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex justify-end items-center pt-6 space-x-4">
+                     <a href = "{% url 'employee_list' %}" class="py-2 px-6 border border-gray-300 rounded-md shadow-sm text-md font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 transition">
+                        Cancel
+                     </a>
+                    <!-- MODIFICATION 3: Removed stray </button> tag -->
+                    <button type="submit" class="py-2 px-6 border border-transparent rounded-md shadow-sm text-md font-medium text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-700 transition">
+                        Create Profile
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 
+          Removed the 'else' block and the "Access Denied" message 
+          to allow staff users to see the form.
+        -->
+        
+    </div>
+    <script>
+        // JavaScript to display the chosen file name
+        const resumeUpload = document.getElementById('resume-upload');
+        const fileChosen = document.getElementById('file-chosen');
+
+        resumeUpload.addEventListener('change', function(){
+            fileChosen.textContent = this.files[0] ? this.files[0].name : 'No file chosen';
+        });
+    </script>
+</body>
+</html>
+
+

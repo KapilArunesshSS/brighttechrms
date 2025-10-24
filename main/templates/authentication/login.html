@@ -1,0 +1,86 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>brighttech.rms | Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;    
+        }
+        .messages {
+            list-style: none; 
+            padding: 0; 
+        }
+    </style>
+    <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-md">
+        <!-- Login Form -->
+        <div class="bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-extrabold text-gray-800">Welcome Brightians </h1>
+                <p class="text-gray-500 mt-2">Please enter your details to sign in.</p>
+            </div>
+            {% if messages %}
+                <ul class="messages mb-6">
+                {% for message in messages %}
+                    <li class="
+                        {% if message.tags == 'error' %}
+                            text-red-600 bg-red-50 p-3 rounded-lg text-sm font-medium border border-red-200
+                        {% elif message.tags == 'success' %}
+                            text-green-600 bg-green-50 p-3 rounded-lg text-sm font-medium border border-green-200
+                        {% else %}
+                            text-gray-600 bg-gray-50 p-3 rounded-lg text-sm font-medium border border-gray-200
+                        {% endif %}
+                        ">
+                        {{ message }}
+                    </li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+            
+            <form action="/login/" method="post">
+                {% csrf_token %}
+                <div class="space-y-6">
+                    <!-- Username Field -->
+                    {% comment %} <div>
+                        <label for="login-username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input type="text" id="login-username" name="username" placeholder="------>" 
+                               class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-800 focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all" 
+                               required>
+                    </div> {% endcomment %}
+                    <!--email-->
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                        <input type="email" id="login-email" name="email" placeholder="------>" 
+                               class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-800 focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all" 
+                               required>
+                    </div>
+
+                    <!-- Password Field -->
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="login-password" name="password" placeholder="------>" 
+                               class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-800 focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all" 
+                               required>
+                    </div>
+                </div>
+
+                <div class="mt-8">
+                    <button type="submit" 
+                            class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-xl shadow-md hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200 transition-all">
+                        Sign In
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>
