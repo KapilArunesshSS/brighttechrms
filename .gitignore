@@ -1,8 +1,6 @@
 .DS_Store
-*.log
 venv/
 .env
-/__pycache__/
 *.pyc
 .idea/
 .vscode/
