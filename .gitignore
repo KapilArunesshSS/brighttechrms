@@ -1,5 +1,4 @@
 .DS_Store
-/media/
 *.log
 venv/
 .env
