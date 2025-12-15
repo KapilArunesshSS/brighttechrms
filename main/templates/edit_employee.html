@@ -134,6 +134,8 @@
                             <option value="ROUGHING MILL FITTER (BAR)" {% if employee.role == 'ROUGHING MILL FITTER (BAR)' %}selected{% endif %}>ROUGHING MILL FITTER</option>
                         </optgroup>
                         <optgroup label="ROLLING MILL - ROLL SHOP / GUIDE SHOP">
+                            <option value="CNC OPERATOR"{% if employee.role == 'CNC OPERATOR' %}selected{% endif %}>CNC OPERATOR</option>
+                            <option value="MACHINIST"{% if employee.role == 'MACHINIST' %}selected{% endif %}>MACHINIST</option>
                             <option value="ROLL ASSEMBLY FITTER" {% if employee.role == 'ROLL ASSEMBLY FITTER' %}selected{% endif %}>ROLL ASSEMBLY FITTER</option>
                             <option value="ABST ROLL ASSEMBLY FITTER" {% if employee.role == 'ABST ROLL ASSEMBLY FITTER' %}selected{% endif %}>ABST ROLL ASSEMBLY FITTER</option>
                             <option value="SR ROLL ASSEMBLY FITTER" {% if employee.role == 'SR ROLL ASSEMBLY FITTER' %}selected{% endif %}>SR ROLL ASSEMBLY FITTER</option>
@@ -168,6 +170,28 @@
                             <option value="FURNACE OPERATOR (ROLLING MILL)" {% if employee.role == 'FURNACE OPERATOR (ROLLING MILL)' %}selected{% endif %}>FURNACE OPERATOR</option>
                             <option value="PEEL BAR OPERATOR" {% if employee.role == 'PEEL BAR OPERATOR' %}selected{% endif %}>PEEL BAR OPERATOR</option>
                             <option value="EOT CRANE OPERATOR (ROLLING MILL)" {% if employee.role == 'EOT CRANE OPERATOR (ROLLING MILL)' %}selected{% endif %}>EOT CRANE OPERATOR</option>
+                        </optgroup>
+                        </optgroup label="STEEL MELTING DIVISION">
+                            <option value="MOLD OPERATOR"{% if employee.role == 'MOLD OPERATOR' %}selected{% endif %}>MOLD OPERATOR</option>
+                            <option value="LADLE OPERATOR"{% if employee.role == 'LADLE OPERATOR'%}selected{% endif %}>LADLE OPERATOR</option>
+                            <option value="HOT LADLE CRANE OPERATOR" {% if employee.role == 'HOT LADLE CRANE OPERATOR'%}selected{% endif %}>HOT LADLE CRANE OPERATOR</option>
+                            <option value="TUNDISH MAN"{% if employee.role == 'TUNDISH MAN'%}selected{% endif %}>TUNDISH MAN</option>
+                            <option value="LRF/EOF TECHNICIAN"{% if employee.role == 'LRF/EOF TECHNICIAN'%}selected{% endif %}>LRF/EOF TECHNICIAN</option>
+                            <option value="SR MAINTENANCE FITTER (SMD)"{% if employee.role ==  'SR MAINTENANCE FITTER (SMD)'%}selected{% endif %}>SR MAINTENANCE FITTER</option>
+                            <option value="MAINTENANCE FITTER (SMD)"{% if employee.role ==  'MAINTENANCE FITTER (SMD)'%}selected{% endif %}>MAINTENANCE FITTER</option>
+                            <option value="ELECTRICAL TECHNICIAN (SMD)"{% if employee.role ==  'ELECTRICAL TECHNICIAN (SMD)'%}selected{% endif %}>ELECTRICAL TECHNICIAN</option>
+                            <option value="ELECTRICIAN (SMD)"{% if employee.role ==  'ELECTRICIAN (SMD)'%}selected{% endif %}>ELECTRICIAN</option>
+                            <option value="TEAMER MAN"{% if employee.role ==  'TEAMER MAN'%}selected{% endif %}>TEAMER MAN</option>
+                            <option value="CCM FITTER"{% if employee.role ==  'CCM FITTER'%}selected{% endif %}>CCM FITTER</option>
+                            <option value="SBO OPERATOR"{% if employee.role ==  'SBO OPERATOR'%}selected{% endif %}>SBO OPERATOR</option>
+                            <option value="MELTER"{% if employee.role ==  'MELTER'%}selected{% endif %}>MELTER</option>
+                            <option value="FIRST HAND"{% if employee.role ==  'FIRST HAND'%}selected{% endif %}>FIRST HAND</option>
+                            <option value="FURNACE INCHARAGE"{% if employee.role ==  'FURNACE INCHARAGE'%}selected{% endif %}>FURNACE INCHARGE</option>
+                            <option value="SCRAP YARD SUPERVISOR"{% if employee.role ==  'SCRAP YARD SUPERVISOR'%}selected{% endif %}>SCRAP YARD SUPERVISOR</option>
+                            <option value="CHARGING CRANE OPERATOR"{% if employee.role ==  'CHARGING CRANE OPERATOR'%}selected{% endif %}>CHARGING CRANE OPERATOR</option>
+                            <option value="LAB TECHNICIAN"{% if employee.role ==  'LAB TECHNICIAN'%}selected{% endif %}>LAB TECHNICIAN</option>
+                            <option value="TANDISH MESAN"{% if employee.role ==  'TANDISH MESAN'%}selected{% endif %}>TANDISH MESAN</option>
+                            <option value="WELDER / GAS CUTTER (SMD)"{% if employee.role ==  'WELDER / GAS CUTTER (SMD)'%}selected{% endif %}>WELDER / GAS CUTTER</option>
                         </optgroup>
                     </select>
                 </div>
