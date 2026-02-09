@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFR Manpower Tracking - 162 Profiles</title>
+    <!-- Include SheetJS for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f4f7f6;
+            --success: #27ae60;
+            --danger: #e74c3c;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .stats-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; background: #eef2f3; padding: 15px 25px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--accent); }
+        .stat-item { display: flex; flex-direction: column; }
+        .stat-label { font-size: 0.8rem; color: #666; font-weight: bold; text-transform: uppercase; }
+        .stat-value { font-size: 1.4rem; font-weight: bold; color: var(--primary); }
+
+        .controls { display: flex; gap: 20px; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-weight: 600; font-size: 0.9rem; color: #555; }
+        select, input[type="date"] { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; }
+
+        .table-container { max-height: 550px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+        thead th { position: sticky; top: 0; background: var(--primary); color: white; padding: 12px; text-align: left; z-index: 10; font-weight: 500; font-size: 0.85rem; }
+        tbody td { padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        tr:nth-child(even) { background-color: #fafafa; }
+        tr:hover { background-color: #f1f7ff; }
+
+        .input-cell input { width: 60px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-weight: bold; }
+        .input-cell input:read-only { background-color: #f0f0f0; color: #7f8c8d; cursor: not-allowed; }
+        .scope-cell { font-weight: 700; color: var(--primary); }
+        .ffr-cell { font-weight: 800; color: var(--accent); }
+        .abs-pct-cell { font-weight: 800; color: var(--danger); }
+        
+        .submit-bar { margin-top: 25px; display: flex; justify-content: flex-end; gap: 15px; }
+        .btn { border: none; padding: 12px 25px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-download { background: #34495e; color: white; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        .badge { padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .badge-hsk { background: #e8f4fd; color: #2980b9; }
+        .badge-sk { background: #e9f7ef; color: #27ae60; }
+        .badge-ssk { background: #fef5e7; color: #f39c12; }
+        .badge-usk { background: #fdedec; color: #c0392b; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1 style="margin:0; font-size: 1.5rem;">Daily FFR Entry System</h1>
+        <div style="font-size: 0.9rem; color: #888;">Live Reporting Dashboard</div>
+    </header>
+
+    <div class="stats-banner">
+        <div class="stat-item">
+            <span class="stat-label">Selected Site</span>
+            <span class="stat-value" id="disp-site">---</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Total Site Scope</span>
+            <span class="stat-value" id="disp-scope">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Average Site FFR %</span>
+            <span class="stat-value" id="disp-avg-ffr" style="color: var(--accent);">0.00%</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Average Absent %</span>
+            <span class="stat-value" id="disp-avg-abs" style="color: var(--danger);">0.00%</span>
+        </div>
+    </div>
+
+    <form id="ffrForm">
+        <div class="controls">
+            <div class="control-group">
+                <label>Report Date</label>
+                <input type="date" name="report_date" id="report_date" value="2026-02-09" required>
+            </div>
+            <div class="control-group">
+                <label>Site Selection</label>
+                <select name="site_selection" id="site_filter" onchange="loadTable()" required>
+                    <option value="">-- Select Site --</option>
+                    <option value="BMM">BMM</option>
+                    <option value="JAIRAJ">JAIRAJ</option>
+                    <option value="MSSSL">MSSSL</option>
+                    <option value="Arjas">Arjas</option>
+                    <option value="SLR">SLR</option>
+                    <option value="AGNI">AGNI</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">SR</th>
+                        <th style="width: 150px;">Department</th>
+                        <th>Designation</th>
+                        <th style="width: 80px;">Skill</th>
+                        <th style="width: 60px;">Scope</th>
+                        <th style="width: 70px;">Present</th>
+                        <th style="width: 70px;">Absent</th>
+                        <th style="width: 80px;">Abs. %</th>
+                        <th style="width: 70px;">W/O</th>
+                        <th style="width: 70px;">OT</th>
+                        <th style="width: 90px;">FFR %</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr><td colspan="11" style="text-align:center; padding:50px; color:#999;">Please select a site from the filter above to begin.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="submit-bar">
+            <button type="button" class="btn btn-download" onclick="downloadExcel()">Download Site Report (Excel)</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    const masterData = [
+        // BMM SITE (SR 1 - 34)
+        {sr:1, site:"BMM", dept:"Rolling Mill", desig:"Mill Tech", skill:"HSK", scope:12},
+        {sr:2, site:"BMM", dept:"Rolling Mill", desig:"Cold Shear Operator", skill:"HSK", scope:7},
+        {sr:3, site:"BMM", dept:"Rolling Mill", desig:"Mill Tech", skill:"SK", scope:9},
+        {sr:4, site:"BMM", dept:"Rolling Mill", desig:"Welder Gascutter", skill:"SK", scope:4},
+        {sr:5, site:"BMM", dept:"Rolling Mill", desig:"STACKER/Bundling Operator", skill:"HSK", scope:7},
+        {sr:6, site:"BMM", dept:"Rolling Mill", desig:"Cooling bed to Bundling Operator", skill:"SK", scope:9},
+        {sr:7, site:"BMM", dept:"Rolling Mill", desig:"EOT Crane Operator", skill:"HSK", scope:14},
+        {sr:8, site:"BMM", dept:"Rolling Mill", desig:"PRAYASHA CNC OPERATOR", skill:"HSK", scope:2},
+        {sr:9, site:"BMM", dept:"Rolling Mill", desig:"LATHE-1(AUTO & SPARK CNC)", skill:"HSK", scope:2},
+        {sr:10, site:"BMM", dept:"Rolling Mill", desig:"LATHE-2", skill:"HSK", scope:2},
+        {sr:11, site:"BMM", dept:"Rolling Mill", desig:"CNC Notching", skill:"HSK", scope:1},
+        {sr:12, site:"BMM", dept:"Rolling Mill", desig:"CNC Branding", skill:"HSK", scope:2},
+        {sr:13, site:"BMM", dept:"Rolling Mill", desig:"CNC Branding (Drilling / surface grinding)", skill:"SK", scope:1},
+        {sr:14, site:"BMM", dept:"Rolling Mill", desig:"SHAPPER MC", skill:"SK", scope:1},
+        {sr:15, site:"BMM", dept:"Rolling Mill", desig:"MILLING MC", skill:"SK", scope:1},
+        {sr:16, site:"BMM", dept:"Rolling Mill", desig:"Fitter ROLL ASSY", skill:"HSK", scope:4},
+        {sr:17, site:"BMM", dept:"Rolling Mill", desig:"Fitter STAND ASSY", skill:"HSK", scope:4},
+        {sr:18, site:"BMM", dept:"Rolling Mill", desig:"Guide & STAND MAINT", skill:"HSK", scope:1},
+        {sr:19, site:"BMM", dept:"Rolling Mill", desig:"Guide & STAND MAINT", skill:"SSK", scope:2},
+        {sr:20, site:"BMM", dept:"Rolling Mill", desig:"ASS.FITTER ROLL ASSY", skill:"SSK", scope:4},
+        {sr:21, site:"BMM", dept:"Rolling Mill", desig:"ASS.FITTER M/C SHOP", skill:"SSK", scope:3},
+        {sr:22, site:"BMM", dept:"Rolling Mill", desig:"ASS.Fitter STAND ASSY", skill:"SSK", scope:2},
+        {sr:23, site:"BMM", dept:"Rolling Mill", desig:"FITTER-MILL & HANDLING", skill:"HSK", scope:10},
+        {sr:24, site:"BMM", dept:"Rolling Mill", desig:"WELDER MILL & HANDLING", skill:"HSK", scope:4},
+        {sr:25, site:"BMM", dept:"Rolling Mill", desig:"FITTER Water Complex & EOT", skill:"SK", scope:5},
+        {sr:26, site:"BMM", dept:"Rolling Mill", desig:"WELDER ASS.FITTER WATERCOMPLEX", skill:"SK", scope:3},
+        {sr:27, site:"BMM", dept:"Rolling Mill", desig:"E&I Technician - Mill & Handling Area", skill:"HSK", scope:14},
+        {sr:28, site:"BMM", dept:"Rolling Mill", desig:"E&I Technician - Water Complex & EOT", skill:"SK", scope:3},
+        {sr:29, site:"BMM", dept:"Rolling Mill", desig:"QC & Despatch", skill:"SK", scope:3},
+        {sr:30, site:"BMM", dept:"UTILITY", desig:"Pump Operator", skill:"SSK", scope:6},
+        {sr:31, site:"BMM", dept:"UTILITY", desig:"Operator cum Maint Mechanical Technician", skill:"SK", scope:6},
+        {sr:32, site:"BMM", dept:"UTILITY", desig:"Electrical Technician", skill:"SK", scope:1},
+        {sr:33, site:"BMM", dept:"CNC Supply", desig:"CNC Notching", skill:"HSK", scope:10},
+        {sr:34, site:"BMM", dept:"CNC Supply", desig:"CNC Branding", skill:"HSK", scope:4},
+
+        // JAIRAJ SITE (SR 36 - 60)
+        {sr:36, site:"JAIRAJ", dept:"Rolling Mill", desig:"Shift Technicians - Electrician", skill:"SK", scope:5},
+        {sr:37, site:"JAIRAJ", dept:"Rolling Mill", desig:"PULPIT Operator", skill:"SK", scope:3},
+        {sr:38, site:"JAIRAJ", dept:"Rolling Mill", desig:"SHIFT Technicians / Fitters", skill:"SK", scope:9},
+        {sr:39, site:"JAIRAJ", dept:"Rolling Mill", desig:"Crane Operator", skill:"SK", scope:6},
+        {sr:40, site:"JAIRAJ", dept:"Rolling Mill", desig:"Guide Fitter", skill:"SK", scope:3},
+        {sr:41, site:"JAIRAJ", dept:"Rolling Mill", desig:"Rolling Stand Assembly Operators", skill:"SK", scope:6},
+        {sr:42, site:"JAIRAJ", dept:"Rolling Mill", desig:"CNC Operator", skill:"SK", scope:1},
+        {sr:43, site:"JAIRAJ", dept:"Rolling Mill", desig:"Machinist", skill:"SK", scope:2},
+        {sr:44, site:"JAIRAJ", dept:"Rolling Mill", desig:"Welder & Gas Cutter", skill:"SK", scope:3},
+        {sr:45, site:"JAIRAJ", dept:"Rolling Mill", desig:"TAG Assistants", skill:"SSK", scope:4},
+        {sr:46, site:"JAIRAJ", dept:"Rolling Mill", desig:"Bundle Tagers", skill:"SSK", scope:4},
+        {sr:47, site:"JAIRAJ", dept:"Rolling Mill", desig:"Dispatch Helpers", skill:"SSK", scope:4},
+        {sr:48, site:"JAIRAJ", dept:"Rolling Mill", desig:"Technical Helpers", skill:"SSK", scope:10},
+        {sr:49, site:"JAIRAJ", dept:"SMS", desig:"Shift Technicians - Electrician", skill:"SK", scope:6},
+        {sr:50, site:"JAIRAJ", dept:"UTILITY", desig:"DCS Helpers", skill:"SSK", scope:3},
+        {sr:51, site:"JAIRAJ", dept:"UTILITY", desig:"SMS & RM - Operators", skill:"SK", scope:6},
+        {sr:52, site:"JAIRAJ", dept:"UTILITY", desig:"SMS & RM - Helpers", skill:"SSK", scope:3},
+        {sr:53, site:"JAIRAJ", dept:"UTILITY", desig:"Utilities - Operators", skill:"SK", scope:8},
+        {sr:54, site:"JAIRAJ", dept:"UTILITY", desig:"Utilities - Helpers", skill:"SSK", scope:3},
+        {sr:55, site:"JAIRAJ", dept:"UTILITY", desig:"SMS, RM, MBF, Sinter - Welder (Crane Maint)", skill:"SK", scope:5},
+        {sr:56, site:"JAIRAJ", dept:"UTILITY", desig:"Helpers - SMS, RM, MBF & Sinter", skill:"SK", scope:8},
+        {sr:57, site:"JAIRAJ", dept:"UTILITY", desig:"Shift Technicians - MRSS", skill:"SK", scope:6},
+        {sr:58, site:"JAIRAJ", dept:"UTILITY", desig:"Electricians - Cranes, Compressors, Pumphouse", skill:"SK", scope:2},
+        {sr:59, site:"JAIRAJ", dept:"UTILITY", desig:"Technician (Pump Maintenance)", skill:"SK", scope:2},
+        {sr:60, site:"JAIRAJ", dept:"UTILITY", desig:"Technician (Pump Maintenance)", skill:"SK", scope:2},
+
+        // MSSSL SITE (SR 61 - 84)
+        {sr:61, site:"MSSSL", dept:"BBU", desig:"Bar to Bar (Drawing)", skill:"HSK", scope:5},
+        {sr:62, site:"MSSSL", dept:"BBU", desig:"Bar to Bar Peeling + Reeling Operator", skill:"HSK", scope:7},
+        {sr:63, site:"MSSSL", dept:"BBU", desig:"Centreless Grinder Operator", skill:"HSK", scope:27},
+        {sr:64, site:"MSSSL", dept:"BBU", desig:"Coil to Bar Draw Bench", skill:"HSK", scope:10},
+        {sr:65, site:"MSSSL", dept:"BBU", desig:"Cutting Operator - Circular Saw", skill:"HSK", scope:11},
+        {sr:66, site:"MSSSL", dept:"BBU", desig:"Straightening + Chamfering Operator", skill:"HSK", scope:4},
+        {sr:67, site:"MSSSL", dept:"BBU", desig:"Straightening/Reeling Operator", skill:"HSK", scope:8},
+        {sr:68, site:"MSSSL", dept:"BBU", desig:"Tool Room", skill:"HSK", scope:4},
+        {sr:69, site:"MSSSL", dept:"BBU", desig:"Polishing Operator", skill:"HSK", scope:3},
+        {sr:70, site:"MSSSL", dept:"BBU", desig:"Straightening + Profile Str. Operator", skill:"HSK", scope:4},
+        {sr:71, site:"MSSSL", dept:"BBU", desig:"Shot Blasting + Pointing Operator", skill:"HSK", scope:13},
+        {sr:72, site:"MSSSL", dept:"CFD", desig:"Coil to Coil Drawing Operator", skill:"HSK", scope:11},
+        {sr:73, site:"MSSSL", dept:"CFD", desig:"Coil to Coil Drawing shifting/packing", skill:"HSK", scope:9},
+        {sr:74, site:"MSSSL", dept:"CFD", desig:"RM Unloading + Pickling & Phosphating", skill:"HSK", scope:10},
+        {sr:75, site:"MSSSL", dept:"CFD", desig:"Swaging / Pointing Operator", skill:"HSK", scope:7},
+        {sr:76, site:"MSSSL", dept:"CFD", desig:"Compactor + Upender Operator", skill:"HSK", scope:8},
+        {sr:77, site:"MSSSL", dept:"Maintenance", desig:"Electrical-Maintenance Supervisors", skill:"HSK", scope:10},
+        {sr:78, site:"MSSSL", dept:"Maintenance", desig:"Mechanical-Maintenance Supervisor", skill:"HSK", scope:11},
+        {sr:79, site:"MSSSL", dept:"TSD", desig:"ECT Helper Load/Unload/Salvage", skill:"SSK", scope:4},
+        {sr:80, site:"MSSSL", dept:"TSD", desig:"Sample preparation / Testing", skill:"SSK", scope:6},
+        {sr:81, site:"MSSSL", dept:"TSD", desig:"UST Helper Load/Unload/Salvage", skill:"SSK", scope:4},
+        {sr:82, site:"MSSSL", dept:"HT", desig:"STC Furnace", skill:"HSK", scope:11},
+        {sr:83, site:"MSSSL", dept:"HT", desig:"Bar hardening & Tempering Furnace", skill:"HSK", scope:1},
+        {sr:84, site:"MSSSL", dept:"BBU", desig:"Helpers Assistant", skill:"USK", scope:10},
+
+        // Arjas SITE (SR 85 - 107)
+        {sr:85, site:"Arjas", dept:"Rolling Mill", desig:"Welder cum gas cutter", skill:"SK", scope:3},
+        {sr:86, site:"Arjas", dept:"Rolling Mill", desig:"Bar Aligner", skill:"SSK", scope:3},
+        {sr:87, site:"Arjas", dept:"Rolling Mill", desig:"Bundling M/c Operator", skill:"SSK", scope:6},
+        {sr:88, site:"Arjas", dept:"Rolling Mill", desig:"Sling Man", skill:"SSK", scope:3},
+        {sr:89, site:"Arjas", dept:"Rolling Mill", desig:"Tag Printer", skill:"SSK", scope:3},
+        {sr:90, site:"Arjas", dept:"INS- SUPPLY", desig:"Sling Man", skill:"SSK", scope:6},
+        {sr:91, site:"Arjas", dept:"INS- SUPPLY", desig:"Helper", skill:"SSK", scope:6},
+        {sr:92, site:"Arjas", dept:"INS- SUPPLY", desig:"Helper", skill:"SSK", scope:3},
+        {sr:93, site:"Arjas", dept:"INS- SUPPLY", desig:"Operator", skill:"HSK", scope:6},
+        {sr:94, site:"Arjas", dept:"INS- SUPPLY", desig:"Grinder", skill:"SSK", scope:12},
+        {sr:95, site:"Arjas", dept:"INS- SUPPLY", desig:"Crane Operator", skill:"HSK", scope:1},
+        {sr:96, site:"Arjas", dept:"INS- SUPPLY", desig:"Helper", skill:"USK", scope:3},
+        {sr:97, site:"Arjas", dept:"INS- SUPPLY", desig:"Gas Cutter", skill:"SK", scope:3},
+        {sr:98, site:"Arjas", dept:"INS - TONNAGE", desig:"Dimension Checker", skill:"HSK", scope:6},
+        {sr:99, site:"Arjas", dept:"INS - TONNAGE", desig:"Gas Cutter", skill:"SK", scope:3},
+        {sr:100, site:"Arjas", dept:"INS - TONNAGE", desig:"Grinder", skill:"SSK", scope:18},
+        {sr:101, site:"Arjas", dept:"INS - TONNAGE", desig:"Helper", skill:"USK", scope:33},
+        {sr:102, site:"Arjas", dept:"INS - TONNAGE", desig:"Shift GET", skill:"HSK", scope:3},
+        {sr:103, site:"Arjas", dept:"Straitening", desig:"Helper", skill:"USK", scope:12},
+        {sr:104, site:"Arjas", dept:"Heat Treatment", desig:"Dimension Checker", skill:"HSK", scope:1},
+        {sr:105, site:"Arjas", dept:"Heat Treatment", desig:"Grinder", skill:"SSK", scope:2},
+        {sr:106, site:"Arjas", dept:"Heat Treatment", desig:"Helper", skill:"USK", scope:1},
+        {sr:107, site:"Arjas", dept:"Packaging", desig:"Helper", skill:"USK", scope:3},
+
+        // SLR SITE (SR 108 - 115)
+        {sr:108, site:"SLR", dept:"Rolling Mill", desig:"Mill Fitter", skill:"HSK", scope:9},
+        {sr:109, site:"SLR", dept:"Rolling Mill", desig:"Roill Shop Fitter", skill:"HSK", scope:6},
+        {sr:110, site:"SLR", dept:"Rolling Mill", desig:"Guide Fitter", skill:"HSK", scope:2},
+        {sr:111, site:"SLR", dept:"Rolling Mill", desig:"Roll Shop Assistant Fitter", skill:"SK", scope:6},
+        {sr:112, site:"SLR", dept:"Rolling Mill", desig:"Gas Cutter", skill:"SK", scope:3},
+        {sr:113, site:"SLR", dept:"Rolling Mill", desig:"B H Operator", skill:"SSK", scope:30},
+        {sr:114, site:"SLR", dept:"Rolling Mill", desig:"Mill Assistant Fitter", skill:"SSK", scope:3},
+        {sr:115, site:"SLR", dept:"Rolling Mill", desig:"Office Boy", skill:"USK", scope:1},
+
+        // AGNI SITE (SR 116 - 162)
+        {sr:116, site:"AGNI", dept:"Furnace", desig:"Melter", skill:"HSK", scope:6},
+        {sr:117, site:"AGNI", dept:"CCM", desig:"Shift Incharge", skill:"HSK", scope:5},
+        {sr:118, site:"AGNI", dept:"CCM", desig:"Mould Operator", skill:"SK", scope:12},
+        {sr:119, site:"AGNI", dept:"CCM", desig:"Gas Cutter", skill:"SK", scope:13},
+        {sr:120, site:"AGNI", dept:"CCM", desig:"SBO + Fitter", skill:"SSK", scope:5},
+        {sr:121, site:"AGNI", dept:"CCM", desig:"Teemer Man", skill:"SK", scope:5},
+        {sr:122, site:"AGNI", dept:"CCM", desig:"Laddle Man", skill:"SK", scope:5},
+        {sr:123, site:"AGNI", dept:"LADLE AREA", desig:"Ladle Mason", skill:"SSK", scope:4},
+        {sr:124, site:"AGNI", dept:"TUNDISH AREA", desig:"Tundish Mason", skill:"SSK", scope:3},
+        {sr:125, site:"AGNI", dept:"FORMER AREA", desig:"Forma Fitter", skill:"HSK", scope:1},
+        {sr:126, site:"AGNI", dept:"FORMER AREA", desig:"Forma Welder", skill:"SK", scope:2},
+        {sr:127, site:"AGNI", dept:"FORMER AREA", desig:"Forma Helper", skill:"USK", scope:2},
+        {sr:128, site:"AGNI", dept:"ELECTRICAL DEPT", desig:"Sr Electrician", skill:"HSK", scope:3},
+        {sr:129, site:"AGNI", dept:"ELECTRICAL DEPT", desig:"Jr Electrician", skill:"SK", scope:10},
+        {sr:130, site:"AGNI", dept:"MECHANICAL DEPT", desig:"Sr Mechanical Fitter", skill:"HSK", scope:11},
+        {sr:131, site:"AGNI", dept:"MECHANICAL DEPT", desig:"Jr Mechanical Fitter", skill:"SK", scope:13},
+        {sr:132, site:"AGNI", dept:"LAB TECHNICIAN", desig:"Lab Chemist", skill:"HSK", scope:7},
+        {sr:133, site:"AGNI", dept:"CCM- Helpers", desig:"Mould Operator - Helper", skill:"USK", scope:4},
+        {sr:134, site:"AGNI", dept:"CCM- Helpers", desig:"Ladle Man - Helper", skill:"USK", scope:7},
+        {sr:135, site:"AGNI", dept:"CCM- Helpers", desig:"Ladle Mason - Helper", skill:"USK", scope:2},
+        {sr:136, site:"AGNI", dept:"CCM- Helpers", desig:"Tundish Mason - Helper", skill:"USK", scope:4},
+        {sr:137, site:"AGNI", dept:"CCM- Helpers", desig:"Billet Yard - Helper", skill:"USK", scope:4},
+        {sr:138, site:"AGNI", dept:"EOT CRANE", desig:"Billet Yard Crane Operator", skill:"HSK", scope:4},
+        {sr:139, site:"AGNI", dept:"EOT CRANE", desig:"Shed -3 - Crane Operator", skill:"HSK", scope:4},
+        {sr:140, site:"AGNI", dept:"EOT CRANE", desig:"Shed - 4, 7, 8, 9 - Crane Operator", skill:"HSK", scope:4},
+        {sr:141, site:"AGNI", dept:"EOT CRANE", desig:"Shed 7, 8, 9 - Crane Operator", skill:"HSK", scope:12},
+        {sr:142, site:"AGNI", dept:"IF - UNIT-II", desig:"Supervisor- Furnace", skill:"HSK", scope:2},
+        {sr:143, site:"AGNI", dept:"IF - UNIT-II", desig:"First Hand", skill:"HSK", scope:2},
+        {sr:144, site:"AGNI", dept:"IF - UNIT-II", desig:"Bariman", skill:"SK", scope:13},
+        {sr:145, site:"AGNI", dept:"IF - UNIT-II", desig:"Helper", skill:"USK", scope:13},
+        {sr:146, site:"AGNI", dept:"IF - UNIT-II", desig:"Patching Bariman", skill:"SK", scope:5},
+        {sr:147, site:"AGNI", dept:"IF - UNIT-II", desig:"Patching Helper", skill:"USK", scope:4},
+        {sr:148, site:"AGNI", dept:"IF - UNIT-III", desig:"Supervisor", skill:"HSK", scope:2},
+        {sr:149, site:"AGNI", dept:"IF - UNIT-III", desig:"First Hand", skill:"HSK", scope:2},
+        {sr:150, site:"AGNI", dept:"IF - UNIT-III", desig:"Bariman", skill:"SK", scope:12},
+        {sr:151, site:"AGNI", dept:"IF - UNIT-III", desig:"Helper", skill:"USK", scope:12},
+        {sr:152, site:"AGNI", dept:"IF - UNIT-III", desig:"Patching Bariman", skill:"SK", scope:4},
+        {sr:153, site:"AGNI", dept:"IF - UNIT-III", desig:"Patching Helper", skill:"USK", scope:4},
+        {sr:154, site:"AGNI", dept:"IF - UNIT-IV", desig:"Supervisor", skill:"HSK", scope:2},
+        {sr:155, site:"AGNI", dept:"IF - UNIT-IV", desig:"First Hand", skill:"HSK", scope:2},
+        {sr:156, site:"AGNI", dept:"IF - UNIT-IV", desig:"Bariman", skill:"SK", scope:13},
+        {sr:157, site:"AGNI", dept:"IF - UNIT-IV", desig:"Helper", skill:"USK", scope:13},
+        {sr:158, site:"AGNI", dept:"IF - UNIT-IV", desig:"Patching Bariman", skill:"SK", scope:5},
+        {sr:159, site:"AGNI", dept:"IF - UNIT-IV", desig:"Patching Helper", skill:"USK", scope:4},
+        {sr:160, site:"AGNI", dept:"QC", desig:"Lab Assistant - Helper", skill:"USK", scope:2},
+        {sr:161, site:"AGNI", dept:"STAFF - SUPPLY", desig:"SITE INCHARGE", skill:"HSK", scope:1},
+        {sr:162, site:"AGNI", dept:"STAFF - SUPPLY", desig:"ADMIN", skill:"HSK", scope:1}
+    ];
+
+    let currentSiteData = [];
+
+    function getSkillBadge(skill) {
+        const s = skill.toLowerCase();
+        return `<span class="badge badge-${s}">${skill}</span>`;
+    }
+
+    function loadTable() {
+        const site = document.getElementById('site_filter').value;
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = '';
+
+        if (!site) {
+            tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:50px; color:#999;">Select a site to begin.</td></tr>';
+            document.getElementById('disp-site').innerText = "---";
+            updateStats(0, 0, 0);
+            return;
+        }
+
+        currentSiteData = masterData.filter(d => d.site === site);
+        document.getElementById('disp-site').innerText = site;
+
+        currentSiteData.forEach((row) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.sr}</td>
+                <td>
+                    ${row.dept}
+                </td>
+                <td>
+                    ${row.desig}
+                </td>
+                <td>${getSkillBadge(row.skill)}</td>
+                <td class="scope-cell">
+                    ${row.scope}
+                </td>
+                <td class="input-cell"><input type="number" name="p_${row.sr}" oninput="calcFFR()" value="0" min="0"></td>
+                <td class="input-cell"><input type="number" name="a_${row.sr}" oninput="calcFFR()" value="${row.scope}" min="0"></td>
+                <td class="abs-pct-cell" id="abs_pct_${row.sr}">100.00%</td>
+                <td class="input-cell"><input type="number" name="w_${row.sr}" value="0" min="0"></td>
+                <td class="input-cell"><input type="number" name="o_${row.sr}" value="0" min="0" step="0.5"></td>
+                <td class="ffr-cell" id="ffr_val_${row.sr}">0.00%</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        calcFFR(true); // Initial calc
+    }
+
+    function calcFFR(isInitial = false) {
+        let totalScope = 0;
+        let totalPresent = 0;
+        let totalAbsent = 0;
+
+        const activeInput = document.activeElement;
+
+        currentSiteData.forEach((row) => {
+            const scope = row.scope;
+            const pInput = document.querySelector(`input[name="p_${row.sr}"]`);
+            const aInput = document.querySelector(`input[name="a_${row.sr}"]`);
+            
+            let pVal = parseInt(pInput.value) || 0;
+            let aVal = parseInt(aInput.value) || 0;
+
+            // Logic: if present is updated, update absent. If absent is updated, update present.
+            // When initial loading, or when present is updated
+            if (!isInitial && activeInput === pInput) {
+                aVal = Math.max(0, scope - pVal);
+                aInput.value = aVal;
+            } else if (!isInitial && activeInput === aInput) {
+                pVal = Math.max(0, scope - aVal);
+                pInput.value = pVal;
+            }
+
+            const ffr = ((pVal / scope) * 100).toFixed(2);
+            const absPct = ((aVal / scope) * 100).toFixed(2);
+            
+            const cellFFR = document.getElementById(`ffr_val_${row.sr}`);
+            const cellAbs = document.getElementById(`abs_pct_${row.sr}`);
+            
+            cellFFR.innerText = ffr + '%';
+            cellAbs.innerText = absPct + '%';
+            
+            // FFR Color feedback
+            if (ffr < 70) cellFFR.style.color = '#c0392b';
+            else if (ffr < 90) cellFFR.style.color = '#f39c12';
+            else cellFFR.style.color = '#27ae60';
+
+            totalScope += scope;
+            totalPresent += pVal;
+            totalAbsent += aVal;
+        });
+
+        const avgFFR = totalScope > 0 ? ((totalPresent / totalScope) * 100).toFixed(2) : "0.00";
+        const avgAbs = totalScope > 0 ? ((totalAbsent / totalScope) * 100).toFixed(2) : "0.00";
+        updateStats(totalScope, avgFFR, avgAbs);
+    }
+
+    function updateStats(scope, ffr, abs) {
+        document.getElementById('disp-scope').innerText = scope;
+        
+        const avgElem = document.getElementById('disp-avg-ffr');
+        avgElem.innerText = ffr + '%';
+        if (ffr < 70) avgElem.style.color = '#c0392b';
+        else if (ffr < 90) avgElem.style.color = '#f39c12';
+        else avgElem.style.color = '#27ae60';
+
+        const absElem = document.getElementById('disp-avg-abs');
+        absElem.innerText = abs + '%';
+        if (abs > 30) absElem.style.color = '#c0392b';
+        else if (abs > 15) absElem.style.color = '#f39c12';
+        else absElem.style.color = '#27ae60';
+    }
+
+    function downloadExcel() {
+        const site = document.getElementById('site_filter').value;
+        const date = document.getElementById('report_date').value;
+        if (!site) { alert("Please select a site first."); return; }
+
+        // Prepare Data for SheetJS
+        const data = [
+            ["FFR MANPOWER REPORT"],
+            ["Site:", site, "Date:", date],
+            [""],
+            ["SR", "Department", "Designation", "Skill", "Scope", "Present", "Absent", "Abs. %", "W/O", "OT", "FFR %"]
+        ];
+
+        currentSiteData.forEach(row => {
+            const p = document.querySelector(`input[name="p_${row.sr}"]`).value || 0;
+            const a = document.querySelector(`input[name="a_${row.sr}"]`).value || 0;
+            const w = document.querySelector(`input[name="w_${row.sr}"]`).value || 0;
+            const o = document.querySelector(`input[name="o_${row.sr}"]`).value || 0;
+            const ffr = ((p / row.scope) * 100).toFixed(2) + "%";
+            const absPct = ((a / row.scope) * 100).toFixed(2) + "%";
+
+            data.push([row.sr, row.dept, row.desig, row.skill, row.scope, p, a, absPct, w, o, ffr]);
+        });
+
+        data.push([""]);
+        data.push(["", "", "", "SITE SUMMARY", document.getElementById('disp-scope').innerText, "", "", document.getElementById('disp-avg-abs').innerText, "", "", document.getElementById('disp-avg-ffr').innerText]);
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        XLSX.utils.book_append_sheet(wb, ws, "FFR Report");
+        XLSX.writeFile(wb, `FFR_Report_${site}_${date}.xlsx`);
+    }
+
+    window.onload = loadTable;
+</script>
+
+</body>
+</html>

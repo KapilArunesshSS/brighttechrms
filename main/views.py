@@ -7,10 +7,12 @@ from django.shortcuts import render, redirect , get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate , login as login_django , logout as logout_django
 from django.contrib.auth.decorators import login_required
-from .models import Employee
+from .models import Employee , ManpowerEntry
 from django.db.models import Count
 from datetime import datetime
 import json
+from datetime import date
+
 
 # allowing super user 
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -19,6 +21,59 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 # @login_required(login_url='login')
 # def home(request):
 #     return render (request, 'home.html')
+@login_required(login_url='login')
+def FFR (request):
+    """
+    Handles displaying the predefined 162 profiles (GET) 
+    and saving the attendance data (POST) to ManpowerEntry.
+    """
+    if request.method == "POST":
+        selected_site = request.POST.get('site_selection')
+        report_date = request.POST.get('report_date')
+        
+        if not selected_site or not report_date:
+            messages.error(request, "Please select both Site and Date.")
+            return redirect('FFR')
+
+        # Find all keys starting with 'p_' (Present count)
+        present_keys = [k for k in request.POST.keys() if k.startswith('p_')]
+        
+        for p_key in present_keys:
+            sr_no = p_key.split('_')[1]
+            
+            # Retrieve numeric values
+            present = int(request.POST.get(f'p_{sr_no}', 0))
+            absent = int(request.POST.get(f'a_{sr_no}', 0))
+            wo = int(request.POST.get(f'w_{sr_no}', 0))
+            ot = float(request.POST.get(f'o_{sr_no}', 0))
+            
+            # Retrieve hidden metadata sent from ffr.html
+            dept = request.POST.get(f'dept_{sr_no}')
+            desig = request.POST.get(f'desig_{sr_no}')
+            scope = int(request.POST.get(f'scope_{sr_no}', 0))
+
+            # Update existing record for that day/site/designation or create a new one
+            ManpowerEntry.objects.update_or_create(
+                date=report_date,
+                site=selected_site,
+                department=dept,
+                designation=desig,
+                defaults={
+                    'scope': scope,
+                    'present': present,
+                    'absent': absent,
+                    'weekly_off': wo,
+                    'overtime': ot
+                }
+            )
+
+        messages.success(request, f"FFR Report for {selected_site} saved successfully!")
+        return redirect('FFR')
+
+    # GET request: Render the ffr.html template from your structure
+    return render(request, 'ffr.html', {
+        'current_date': str(date.today())
+    })
 @login_required(login_url='login')
 def employee_list(request):
     """

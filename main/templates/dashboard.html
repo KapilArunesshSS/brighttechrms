@@ -116,8 +116,6 @@
             <!-- ... existing sidebar nav ... -->
             <nav class="flex-grow">
                 <ul class="py-4">
-                
-                    <!-- MODIFICATION: Only "Add Employee" is hidden for non-superusers -->
                     
                     <li class="px-4 mt-2">
                         <a href="{% url 'add_employee' %}" class="flex items-center gap-2 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition duration-300">
@@ -135,6 +133,14 @@
                             <span class="sidebar-tooltip">Export to Excel</span>
                         </a>
                     </li> 
+                    <li class= "px-4 mt-2">
+                        <a href="{% url 'FFR' %}" class="flex items-center gap-2 bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-700 transition duration-300">
+                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                            <span class="sidebar-text">FFR</span> 
+                            <span class="sidebar-tooltip">FFR</span>
+                        </a>
+                    </li>
+
                 </ul>
 
                 <!-- --- SITE PIPELINE SUMMARY TABLE IN ASIDE SECTION --- -->
@@ -219,7 +225,7 @@
                     </div> 
                 </div>
             </nav>
-            <div class="p-4 border-t border-slate-700">
+            {% comment %} <div class="p-4 border-t border-slate-700">
                 <div class="flex items-center gap-3">
                     
                     <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center">
@@ -230,7 +236,7 @@
                         <p class="font-semibold text-white">Administration</p>
                     </div>
                 </div>
-            </div>
+            </div> {% endcomment %}
         </aside>
 
         <!-- Main Content -->

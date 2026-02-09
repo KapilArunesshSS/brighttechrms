@@ -99,3 +99,26 @@ class Employee(models.Model):
             
         super(Employee, self).save(*args, **kwargs)
 
+class ManpowerEntry(models.Model):
+    date = models.DateField()
+    site = models.CharField(max_length=100)
+    department = models.CharField(max_length=100)
+    designation = models.CharField(max_length=150)
+    skill_level = models.CharField(max_length=10)
+    scope = models.IntegerField(help_text="The required manpower count")
+    
+    # User Input Fields
+    present = models.IntegerField(default=0)
+    absent = models.IntegerField(default=0)
+    weekly_off = models.IntegerField(default=0)
+    overtime = models.IntegerField(default=0)
+
+    @property
+    def ff_ratio(self):
+        # Calculation: (Present / Scope) * 100
+        if self.scope > 0:
+            return round((self.present / self.scope) * 100, 2)
+        return 0
+
+    def __str__(self):
+        return f"{self.date} - {self.site} - {self.designation}"
