@@ -3,135 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FFR Manpower Tracking - 162 Profiles</title>
-    <!-- Include SheetJS for Excel Export -->
+    <title>FFR Manpower Management System</title>
+    <!-- Include SheetJS for Client-Side Validation and logic -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
-            --primary: #2c3e50;
-            --accent: #3498db;
-            --bg: #f4f7f6;
-            --success: #27ae60;
-            --danger: #e74c3c;
+            --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6;
+            --success: #27ae60; --danger: #e74c3c; --warning: #f39c12;
+            --muted: #95a5a6;
         }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1750px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
         
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-        .stats-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; background: #eef2f3; padding: 15px 25px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--accent); }
+        /* Site Wise Indicators */
+        .site-status-panel { display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+        .site-card { 
+            flex: 1; min-width: 140px; padding: 12px; border-radius: 8px; 
+            background: white; border: 1px solid #ddd; text-align: center; 
+            transition: all 0.3s ease;
+        }
+        .site-card.uploaded { border-top: 4px solid var(--success); background: #f0fff4; }
+        .site-card.not-uploaded { border-top: 4px solid var(--danger); background: #fff5f5; }
+        .site-card-name { font-weight: 800; font-size: 0.9rem; color: var(--primary); margin-bottom: 4px; }
+        .site-card-ffr { font-size: 1.1rem; font-weight: 800; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .dot-green { background: var(--success); box-shadow: 0 0 5px var(--success); }
+        .dot-red { background: var(--danger); box-shadow: 0 0 5px var(--danger); }
+
+        .stats-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; background: #eef2f3; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 6px solid var(--accent); }
         .stat-item { display: flex; flex-direction: column; }
-        .stat-label { font-size: 0.8rem; color: #666; font-weight: bold; text-transform: uppercase; }
-        .stat-value { font-size: 1.4rem; font-weight: bold; color: var(--primary); }
+        .stat-label { font-size: 0.75rem; color: #7f8c8d; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); margin-top: 5px; }
 
-        .controls { display: flex; gap: 20px; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .control-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-weight: 600; font-size: 0.9rem; color: #555; }
-        select, input[type="date"] { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; }
+        .controls { display: flex; gap: 25px; background: #fdfdfd; padding: 20px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 25px; align-items: flex-end; }
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        label { font-weight: 700; font-size: 0.9rem; color: #444; }
+        select, input[type="date"] { padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 1rem; outline: none; transition: border-color 0.2s; }
+        select:focus, input:focus { border-color: var(--accent); }
 
-        .table-container { max-height: 550px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; min-width: 1200px; }
-        thead th { position: sticky; top: 0; background: var(--primary); color: white; padding: 12px; text-align: left; z-index: 10; font-weight: 500; font-size: 0.85rem; }
-        tbody td { padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
-        tr:nth-child(even) { background-color: #fafafa; }
+        .table-container { max-height: 500px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1500px; }
+        thead th { position: sticky; top: 0; background: var(--primary); color: white; padding: 15px 10px; text-align: left; z-index: 10; font-weight: 600; font-size: 0.85rem; }
+        tbody td { padding: 10px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
         tr:hover { background-color: #f1f7ff; }
 
-        .input-cell input { width: 60px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-weight: bold; }
-        .input-cell input:read-only { background-color: #f0f0f0; color: #7f8c8d; cursor: not-allowed; }
-        .scope-cell { font-weight: 700; color: var(--primary); }
+        .input-cell input, .remark-cell input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; transition: background 0.2s; }
+        .input-cell input { width: 60px; text-align: center; font-weight: 700; }
+        .remark-cell input { width: 100%; min-width: 200px; }
+        
+        .scope-cell { font-weight: 800; color: var(--primary); }
         .ffr-cell { font-weight: 800; color: var(--accent); }
         .abs-pct-cell { font-weight: 800; color: var(--danger); }
         
-        .submit-bar { margin-top: 25px; display: flex; justify-content: flex-end; gap: 15px; }
-        .btn { border: none; padding: 12px 25px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .btn-download { background: #34495e; color: white; }
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .action-bar { margin-top: 25px; display: flex; justify-content: space-between; align-items: center; padding-top: 20px; border-top: 2px solid #eee; }
+        .btn-group { display: flex; gap: 15px; align-items: center; }
+        .btn { border: none; padding: 12px 28px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: all 0.3s; font-size: 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-download-all { background: var(--warning); color: white; }
+        .btn-save { background: var(--success); color: white; box-shadow: 0 4px 10px rgba(39, 174, 96, 0.2); }
+        .btn-delete { background: var(--danger); color: white; }
+        .btn:hover { opacity: 0.9; transform: translateY(-2px); }
 
-        .badge { padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .badge { padding: 4px 8px; border-radius: 5px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
         .badge-hsk { background: #e8f4fd; color: #2980b9; }
         .badge-sk { background: #e9f7ef; color: #27ae60; }
         .badge-ssk { background: #fef5e7; color: #f39c12; }
         .badge-usk { background: #fdedec; color: #c0392b; }
+
+        .alert { padding: 15px 20px; margin-bottom: 25px; border-radius: 8px; font-weight: 600; border: 1px solid transparent; }
+        .alert-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <header>
-        <h1 style="margin:0; font-size: 1.5rem;">Daily FFR Entry System</h1>
-        <div style="font-size: 0.9rem; color: #888;">Live Reporting Dashboard</div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="{% url 'employee_list' %}" class="btn" style="background: var(--muted); color: white; padding: 8px 15px;">&larr; Dashboard</a>
+            <h1 style="margin:0; font-size: 1.6rem;">FFR Manpower Ledger</h1>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-download-all" onclick="validateAndExport()">Export to Excel</button>
+        </div>
     </header>
 
-    <div class="stats-banner">
-        <div class="stat-item">
-            <span class="stat-label">Selected Site</span>
-            <span class="stat-value" id="disp-site">---</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-label">Total Site Scope</span>
-            <span class="stat-value" id="disp-scope">0</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-label">Average Site FFR %</span>
-            <span class="stat-value" id="disp-avg-ffr" style="color: var(--accent);">0.00%</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-label">Average Absent %</span>
-            <span class="stat-value" id="disp-avg-abs" style="color: var(--danger);">0.00%</span>
-        </div>
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Site Status Indicators -->
+    <div class="site-status-panel" id="site-indicators">
+        <!-- Site Cards injected by JS -->
     </div>
 
-    <form id="ffrForm">
-        <div class="controls">
-            <div class="control-group">
-                <label>Report Date</label>
-                <input type="date" name="report_date" id="report_date" value="2026-02-09" required>
-            </div>
-            <div class="control-group">
-                <label>Site Selection</label>
-                <select name="site_selection" id="site_filter" onchange="loadTable()" required>
-                    <option value="">-- Select Site --</option>
-                    <option value="BMM">BMM</option>
-                    <option value="JAIRAJ">JAIRAJ</option>
-                    <option value="MSSSL">MSSSL</option>
-                    <option value="Arjas">Arjas</option>
-                    <option value="SLR">SLR</option>
-                    <option value="AGNI">AGNI</option>
-                </select>
-            </div>
+    <div class="stats-banner">
+        <div class="stat-item"><span class="stat-label">Active Site</span><span class="stat-value">{{ selected_site|default:"ALL" }}</span></div>
+        <div class="stat-item"><span class="stat-label">Total Site Scope</span><span class="stat-value" id="disp-scope">0</span></div>
+        <div class="stat-item"><span class="stat-label">Avg. Site FFR %</span><span class="stat-value" id="disp-avg-ffr" style="color: var(--success);">0.00%</span></div>
+        <div class="stat-item"><span class="stat-label">Avg. Absent %</span><span class="stat-value" id="disp-avg-abs" style="color: var(--danger);">0.00%</span></div>
+    </div>
+
+    <form method="GET" id="filterForm" class="controls">
+        <div class="control-group">
+            <label>Report Date</label>
+            <input type="date" name="report_date" id="report_date" value="{{ report_date }}" onchange="this.form.submit()">
         </div>
+        <div class="control-group">
+            <label>Site Selection</label>
+            <select name="site_selection" id="site_filter" onchange="this.form.submit()">
+                <option value="ALL" {% if selected_site == 'ALL' %}selected{% endif %}>All Sites (Global)</option>
+                <option value="BMM" {% if selected_site == 'BMM' %}selected{% endif %}>BMM</option>
+                <option value="JAIRAJ" {% if selected_site == 'JAIRAJ' %}selected{% endif %}>JAIRAJ</option>
+                <option value="MSSSL" {% if selected_site == 'MSSSL' %}selected{% endif %}>MSSSL</option>
+                <option value="Arjas" {% if selected_site == 'Arjas' %}selected{% endif %}>Arjas</option>
+                <option value="SLR" {% if selected_site == 'SLR' %}selected{% endif %}>SLR</option>
+                <option value="AGNI" {% if selected_site == 'AGNI' %}selected{% endif %}>AGNI</option>
+            </select>
+        </div>
+    </form>
+
+    <form id="ffrForm" method="POST" action="{% url 'FFR' %}">
+        {% csrf_token %}
+        <input type="hidden" name="report_date" value="{{ report_date }}">
+        <input type="hidden" name="site_selection" value="{{ selected_site }}">
 
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
                         <th style="width: 40px;">SR</th>
+                        <th style="width: 120px;">Site</th>
                         <th style="width: 150px;">Department</th>
                         <th>Designation</th>
-                        <th style="width: 80px;">Skill</th>
+                        <th style="width: 70px;">Skill</th>
                         <th style="width: 60px;">Scope</th>
-                        <th style="width: 70px;">Present</th>
-                        <th style="width: 70px;">Absent</th>
-                        <th style="width: 80px;">Abs. %</th>
+                        <th style="width: 80px;">Present</th>
+                        <th style="width: 80px;">Absent</th>
+                        <th style="width: 85px;">Abs. %</th>
                         <th style="width: 70px;">W/O</th>
                         <th style="width: 70px;">OT</th>
                         <th style="width: 90px;">FFR %</th>
+                        <th>Remarks</th>
                     </tr>
                 </thead>
                 <tbody id="table-body">
-                    <tr><td colspan="11" style="text-align:center; padding:50px; color:#999;">Please select a site from the filter above to begin.</td></tr>
+                    <!-- Dynamic Rows -->
                 </tbody>
             </table>
         </div>
 
-        <div class="submit-bar">
-            <button type="button" class="btn btn-download" onclick="downloadExcel()">Download Site Report (Excel)</button>
+        <div class="action-bar">
+            <div class="btn-group">
+                <button type="submit" name="delete_all_database" class="btn btn-delete" onclick="return confirm('WARNING: This will permanently wipe ALL history in the database ledger. Continue?')">Reset Database Ledger</button>
+            </div>
+            <div class="btn-group">
+                <button type="submit" name="save_data" class="btn btn-save" {% if selected_site == "ALL" %}disabled title="Switch to a specific site to save records."{% endif %}>Save Site Record</button>
+            </div>
         </div>
     </form>
 </div>
 
 <script>
+    const sitesList = ["BMM", "JAIRAJ", "MSSSL", "Arjas", "SLR", "AGNI"];
+    
     const masterData = [
-        // BMM SITE (SR 1 - 34)
+        // BMM SITE (1-34)
         {sr:1, site:"BMM", dept:"Rolling Mill", desig:"Mill Tech", skill:"HSK", scope:12},
         {sr:2, site:"BMM", dept:"Rolling Mill", desig:"Cold Shear Operator", skill:"HSK", scope:7},
         {sr:3, site:"BMM", dept:"Rolling Mill", desig:"Mill Tech", skill:"SK", scope:9},
@@ -167,7 +206,7 @@
         {sr:33, site:"BMM", dept:"CNC Supply", desig:"CNC Notching", skill:"HSK", scope:10},
         {sr:34, site:"BMM", dept:"CNC Supply", desig:"CNC Branding", skill:"HSK", scope:4},
 
-        // JAIRAJ SITE (SR 36 - 60)
+        // JAIRAJ (36-60)
         {sr:36, site:"JAIRAJ", dept:"Rolling Mill", desig:"Shift Technicians - Electrician", skill:"SK", scope:5},
         {sr:37, site:"JAIRAJ", dept:"Rolling Mill", desig:"PULPIT Operator", skill:"SK", scope:3},
         {sr:38, site:"JAIRAJ", dept:"Rolling Mill", desig:"SHIFT Technicians / Fitters", skill:"SK", scope:9},
@@ -194,7 +233,7 @@
         {sr:59, site:"JAIRAJ", dept:"UTILITY", desig:"Technician (Pump Maintenance)", skill:"SK", scope:2},
         {sr:60, site:"JAIRAJ", dept:"UTILITY", desig:"Technician (Pump Maintenance)", skill:"SK", scope:2},
 
-        // MSSSL SITE (SR 61 - 84)
+        // MSSSL (61-84)
         {sr:61, site:"MSSSL", dept:"BBU", desig:"Bar to Bar (Drawing)", skill:"HSK", scope:5},
         {sr:62, site:"MSSSL", dept:"BBU", desig:"Bar to Bar Peeling + Reeling Operator", skill:"HSK", scope:7},
         {sr:63, site:"MSSSL", dept:"BBU", desig:"Centreless Grinder Operator", skill:"HSK", scope:27},
@@ -220,7 +259,7 @@
         {sr:83, site:"MSSSL", dept:"HT", desig:"Bar hardening & Tempering Furnace", skill:"HSK", scope:1},
         {sr:84, site:"MSSSL", dept:"BBU", desig:"Helpers Assistant", skill:"USK", scope:10},
 
-        // Arjas SITE (SR 85 - 107)
+        // ARJAS (85-107)
         {sr:85, site:"Arjas", dept:"Rolling Mill", desig:"Welder cum gas cutter", skill:"SK", scope:3},
         {sr:86, site:"Arjas", dept:"Rolling Mill", desig:"Bar Aligner", skill:"SSK", scope:3},
         {sr:87, site:"Arjas", dept:"Rolling Mill", desig:"Bundling M/c Operator", skill:"SSK", scope:6},
@@ -245,7 +284,7 @@
         {sr:106, site:"Arjas", dept:"Heat Treatment", desig:"Helper", skill:"USK", scope:1},
         {sr:107, site:"Arjas", dept:"Packaging", desig:"Helper", skill:"USK", scope:3},
 
-        // SLR SITE (SR 108 - 115)
+        // SLR (108-115)
         {sr:108, site:"SLR", dept:"Rolling Mill", desig:"Mill Fitter", skill:"HSK", scope:9},
         {sr:109, site:"SLR", dept:"Rolling Mill", desig:"Roill Shop Fitter", skill:"HSK", scope:6},
         {sr:110, site:"SLR", dept:"Rolling Mill", desig:"Guide Fitter", skill:"HSK", scope:2},
@@ -255,7 +294,7 @@
         {sr:114, site:"SLR", dept:"Rolling Mill", desig:"Mill Assistant Fitter", skill:"SSK", scope:3},
         {sr:115, site:"SLR", dept:"Rolling Mill", desig:"Office Boy", skill:"USK", scope:1},
 
-        // AGNI SITE (SR 116 - 162)
+        // AGNI (116-162)
         {sr:116, site:"AGNI", dept:"Furnace", desig:"Melter", skill:"HSK", scope:6},
         {sr:117, site:"AGNI", dept:"CCM", desig:"Shift Incharge", skill:"HSK", scope:5},
         {sr:118, site:"AGNI", dept:"CCM", desig:"Mould Operator", skill:"SK", scope:12},
@@ -305,154 +344,134 @@
         {sr:162, site:"AGNI", dept:"STAFF - SUPPLY", desig:"ADMIN", skill:"HSK", scope:1}
     ];
 
-    let currentSiteData = [];
+    const dbEntries = [
+        {% for e in entries %}
+        {
+            site: "{{ e.site|escapejs }}",
+            dept: "{{ e.department|escapejs }}", desig: "{{ e.designation|escapejs }}",
+            p: {{ e.present }}, a: {{ e.absent }}, w: {{ e.weekly_off }}, o: {{ e.overtime }},
+            rem: "{{ e.remarks|default:''|escapejs }}"
+        },
+        {% endfor %}
+    ];
 
-    function getSkillBadge(skill) {
-        const s = skill.toLowerCase();
-        return `<span class="badge badge-${s}">${skill}</span>`;
+    let currentProfiles = [];
+
+    function getBadge(skill) {
+        return `<span class="badge badge-${skill.toLowerCase()}">${skill}</span>`;
+    }
+
+    function initSiteIndicators() {
+        const panel = document.getElementById('site-indicators');
+        panel.innerHTML = '';
+        
+        sitesList.forEach(siteName => {
+            const hasData = dbEntries.some(e => e.site === siteName);
+            let siteTotalScope = 0;
+            let siteTotalPresent = 0;
+            
+            const siteProfiles = masterData.filter(m => m.site === siteName);
+            siteProfiles.forEach(sp => {
+                siteTotalScope += sp.scope;
+                const saved = dbEntries.find(d => d.site === sp.site && d.dept === sp.dept && d.desig === sp.desig);
+                siteTotalPresent += saved ? saved.p : 0;
+            });
+
+            const siteFFR = siteTotalScope > 0 ? ((siteTotalPresent / siteTotalScope) * 100).toFixed(1) : "0.0";
+
+            const card = document.createElement('div');
+            card.className = `site-card ${hasData ? 'uploaded' : 'not-uploaded'}`;
+            card.innerHTML = `
+                <div class="site-card-name">
+                    <span class="status-dot ${hasData ? 'dot-green' : 'dot-red'}"></span>
+                    ${siteName}
+                </div>
+                <div class="site-card-ffr" style="color: ${hasData ? 'var(--success)' : 'var(--danger)'}">
+                    ${siteFFR}%
+                </div>
+                <div style="font-size: 0.65rem; color: #95a5a6; font-weight:bold;">
+                    ${hasData ? 'UPLOADED' : 'PENDING'}
+                </div>
+            `;
+            panel.appendChild(card);
+        });
     }
 
     function loadTable() {
-        const site = document.getElementById('site_filter').value;
+        const site = "{{ selected_site|default:'ALL' }}";
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = '';
+        
+        // Show all if "ALL" is selected, otherwise filter
+        currentProfiles = (site === "ALL") ? masterData : masterData.filter(d => d.site === site);
 
-        if (!site) {
-            tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:50px; color:#999;">Select a site to begin.</td></tr>';
-            document.getElementById('disp-site').innerText = "---";
-            updateStats(0, 0, 0);
-            return;
-        }
-
-        currentSiteData = masterData.filter(d => d.site === site);
-        document.getElementById('disp-site').innerText = site;
-
-        currentSiteData.forEach((row) => {
+        currentProfiles.forEach((p) => {
+            const db = dbEntries.find(d => 
+                d.site === p.site && d.dept === p.dept && d.desig === p.desig
+            );
+            
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${row.sr}</td>
-                <td>
-                    ${row.dept}
-                </td>
-                <td>
-                    ${row.desig}
-                </td>
-                <td>${getSkillBadge(row.skill)}</td>
-                <td class="scope-cell">
-                    ${row.scope}
-                </td>
-                <td class="input-cell"><input type="number" name="p_${row.sr}" oninput="calcFFR()" value="0" min="0"></td>
-                <td class="input-cell"><input type="number" name="a_${row.sr}" oninput="calcFFR()" value="${row.scope}" min="0"></td>
-                <td class="abs-pct-cell" id="abs_pct_${row.sr}">100.00%</td>
-                <td class="input-cell"><input type="number" name="w_${row.sr}" value="0" min="0"></td>
-                <td class="input-cell"><input type="number" name="o_${row.sr}" value="0" min="0" step="0.5"></td>
-                <td class="ffr-cell" id="ffr_val_${row.sr}">0.00%</td>
+                <td>${p.sr}</td>
+                <td style="font-weight: 700; color: #7f8c8d;">${p.site}</td>
+                <td>${p.dept}<input type="hidden" name="dept_${p.sr}" value="${p.dept}"></td>
+                <td>${p.desig}<input type="hidden" name="desig_${p.sr}" value="${p.desig}"></td>
+                <td>${getBadge(p.skill)}<input type="hidden" name="skill_${p.sr}" value="${p.skill}"></td>
+                <td class="scope-cell">${p.scope}<input type="hidden" name="scope_${p.sr}" value="${p.scope}"></td>
+                <td class="input-cell"><input type="number" name="p_${p.sr}" oninput="update()" value="${db ? db.p : 0}"></td>
+                <td class="input-cell"><input type="number" name="a_${p.sr}" oninput="update()" value="${db ? db.a : 0}"></td>
+                <td class="abs-pct-cell" id="ap_${p.sr}">0%</td>
+                <td class="input-cell"><input type="number" name="w_${p.sr}" value="${db ? db.w : 0}"></td>
+                <td class="input-cell"><input type="number" name="o_${p.sr}" value="${db ? db.o : 0}"></td>
+                <td class="ffr-cell" id="fr_${p.sr}">0%</td>
+                <td class="remark-cell"><input type="text" name="rem_${p.sr}" value="${db ? db.rem : ''}" placeholder="..."></td>
             `;
             tbody.appendChild(tr);
         });
-        calcFFR(true); // Initial calc
+        update();
+        initSiteIndicators();
     }
 
-    function calcFFR(isInitial = false) {
-        let totalScope = 0;
-        let totalPresent = 0;
-        let totalAbsent = 0;
-
-        const activeInput = document.activeElement;
-
-        currentSiteData.forEach((row) => {
-            const scope = row.scope;
-            const pInput = document.querySelector(`input[name="p_${row.sr}"]`);
-            const aInput = document.querySelector(`input[name="a_${row.sr}"]`);
+    function update() {
+        let ts = 0, tp = 0, ta = 0;
+        currentProfiles.forEach(r => {
+            const pVal = parseInt(document.querySelector(`input[name="p_${r.sr}"]`).value) || 0;
+            const aVal = parseInt(document.querySelector(`input[name="a_${r.sr}"]`).value) || 0;
             
-            let pVal = parseInt(pInput.value) || 0;
-            let aVal = parseInt(aInput.value) || 0;
-
-            // Logic: if present is updated, update absent. If absent is updated, update present.
-            // When initial loading, or when present is updated
-            if (!isInitial && activeInput === pInput) {
-                aVal = Math.max(0, scope - pVal);
-                aInput.value = aVal;
-            } else if (!isInitial && activeInput === aInput) {
-                pVal = Math.max(0, scope - aVal);
-                pInput.value = pVal;
-            }
-
-            const ffr = ((pVal / scope) * 100).toFixed(2);
-            const absPct = ((aVal / scope) * 100).toFixed(2);
+            const frVal = r.scope > 0 ? ((pVal / r.scope) * 100).toFixed(2) : "0.00";
+            const apVal = r.scope > 0 ? ((aVal / r.scope) * 100).toFixed(2) : "0.00";
             
-            const cellFFR = document.getElementById(`ffr_val_${row.sr}`);
-            const cellAbs = document.getElementById(`abs_pct_${row.sr}`);
+            document.getElementById(`fr_${r.sr}`).innerText = frVal + '%';
+            document.getElementById(`ap_${r.sr}`).innerText = apVal + '%';
             
-            cellFFR.innerText = ffr + '%';
-            cellAbs.innerText = absPct + '%';
-            
-            // FFR Color feedback
-            if (ffr < 70) cellFFR.style.color = '#c0392b';
-            else if (ffr < 90) cellFFR.style.color = '#f39c12';
-            else cellFFR.style.color = '#27ae60';
-
-            totalScope += scope;
-            totalPresent += pVal;
-            totalAbsent += aVal;
+            ts += r.scope; tp += pVal; ta += aVal;
         });
 
-        const avgFFR = totalScope > 0 ? ((totalPresent / totalScope) * 100).toFixed(2) : "0.00";
-        const avgAbs = totalScope > 0 ? ((totalAbsent / totalScope) * 100).toFixed(2) : "0.00";
-        updateStats(totalScope, avgFFR, avgAbs);
+        document.getElementById('disp-scope').innerText = ts;
+        document.getElementById('disp-avg-ffr').innerText = (ts > 0 ? ((tp / ts) * 100).toFixed(2) : "0.00") + '%';
+        document.getElementById('disp-avg-abs').innerText = (ts > 0 ? ((ta / ts) * 100).toFixed(2) : "0.00") + '%';
     }
 
-    function updateStats(scope, ffr, abs) {
-        document.getElementById('disp-scope').innerText = scope;
+    function validateAndExport() {
+        let incomplete = false;
+        currentProfiles.forEach(r => {
+            const p = document.querySelector(`input[name="p_${r.sr}"]`).value;
+            const a = document.querySelector(`input[name="a_${r.sr}"]`).value;
+            if (p === "" || a === "") incomplete = true;
+        });
+
+        if (incomplete) {
+            alert("ALERT: System detected incomplete attendance entries. Please ensure all 'Present' and 'Absent' fields are filed for the current view before exporting to Excel.");
+            return;
+        }
         
-        const avgElem = document.getElementById('disp-avg-ffr');
-        avgElem.innerText = ffr + '%';
-        if (ffr < 70) avgElem.style.color = '#c0392b';
-        else if (ffr < 90) avgElem.style.color = '#f39c12';
-        else avgElem.style.color = '#27ae60';
-
-        const absElem = document.getElementById('disp-avg-abs');
-        absElem.innerText = abs + '%';
-        if (abs > 30) absElem.style.color = '#c0392b';
-        else if (abs > 15) absElem.style.color = '#f39c12';
-        else absElem.style.color = '#27ae60';
-    }
-
-    function downloadExcel() {
-        const site = document.getElementById('site_filter').value;
-        const date = document.getElementById('report_date').value;
-        if (!site) { alert("Please select a site first."); return; }
-
-        // Prepare Data for SheetJS
-        const data = [
-            ["FFR MANPOWER REPORT"],
-            ["Site:", site, "Date:", date],
-            [""],
-            ["SR", "Department", "Designation", "Skill", "Scope", "Present", "Absent", "Abs. %", "W/O", "OT", "FFR %"]
-        ];
-
-        currentSiteData.forEach(row => {
-            const p = document.querySelector(`input[name="p_${row.sr}"]`).value || 0;
-            const a = document.querySelector(`input[name="a_${row.sr}"]`).value || 0;
-            const w = document.querySelector(`input[name="w_${row.sr}"]`).value || 0;
-            const o = document.querySelector(`input[name="o_${row.sr}"]`).value || 0;
-            const ffr = ((p / row.scope) * 100).toFixed(2) + "%";
-            const absPct = ((a / row.scope) * 100).toFixed(2) + "%";
-
-            data.push([row.sr, row.dept, row.desig, row.skill, row.scope, p, a, absPct, w, o, ffr]);
-        });
-
-        data.push([""]);
-        data.push(["", "", "", "SITE SUMMARY", document.getElementById('disp-scope').innerText, "", "", document.getElementById('disp-avg-abs').innerText, "", "", document.getElementById('disp-avg-ffr').innerText]);
-
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        XLSX.utils.book_append_sheet(wb, ws, "FFR Report");
-        XLSX.writeFile(wb, `FFR_Report_${site}_${date}.xlsx`);
+        // Pass current site and date to the export view
+        const site = "{{ selected_site|default:'ALL' }}";
+        const date = "{{ report_date }}";
+        window.location.href = `{% url 'export_ffr_all' %}?site_selection=${site}&report_date=${date}`;
     }
 
     window.onload = loadTable;
 </script>
-
 </body>
 </html>

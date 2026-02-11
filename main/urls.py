@@ -8,7 +8,9 @@ urlpatterns = [
     path('add/', views.add_employee, name='add_employee'),
     path('edit/<int:employee_id>/', views.edit_employee, name='edit_employee'),
     path('delete/<int:employee_id>/', views.delete_employee, name='delete_employee'),
+    # Ensure the names match exactly
     path('FFR/', views.FFR, name='FFR'),
+    path('FFR/export/all/', views.export_ffr_all, name='export_ffr_all'),
 
     # authentication
     path('login/', views.login_view, name='login'),

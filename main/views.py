@@ -9,10 +9,8 @@ from django.contrib.auth import authenticate , login as login_django , logout as
 from django.contrib.auth.decorators import login_required
 from .models import Employee , ManpowerEntry
 from django.db.models import Count
-from datetime import datetime
+from datetime import datetime , date
 import json
-from datetime import date
-
 
 # allowing super user 
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -22,58 +20,93 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 # def home(request):
 #     return render (request, 'home.html')
 @login_required(login_url='login')
-def FFR (request):
-    """
-    Handles displaying the predefined 162 profiles (GET) 
-    and saving the attendance data (POST) to ManpowerEntry.
-    """
+def FFR(request):
+    selected_site = request.GET.get('site_selection', 'ALL')
+    report_date = request.GET.get('report_date', str(date.today()))
+
+    # FIX: Fetch ALL entries for the date so Indicators stay green
+    entries_for_date = ManpowerEntry.objects.filter(date=report_date)
+
     if request.method == "POST":
-        selected_site = request.POST.get('site_selection')
-        report_date = request.POST.get('report_date')
-        
-        if not selected_site or not report_date:
-            messages.error(request, "Please select both Site and Date.")
+        form_site = request.POST.get('site_selection')
+        form_date = request.POST.get('report_date')
+
+        if 'delete_all_database' in request.POST:
+            ManpowerEntry.objects.all().delete()
+            messages.success(request, "Database reset successfully.")
             return redirect('FFR')
 
-        # Find all keys starting with 'p_' (Present count)
-        present_keys = [k for k in request.POST.keys() if k.startswith('p_')]
-        
-        for p_key in present_keys:
-            sr_no = p_key.split('_')[1]
+        if 'save_data' in request.POST:
+            present_keys = [k for k in request.POST.keys() if k.startswith('p_')]
             
-            # Retrieve numeric values
-            present = int(request.POST.get(f'p_{sr_no}', 0))
-            absent = int(request.POST.get(f'a_{sr_no}', 0))
-            wo = int(request.POST.get(f'w_{sr_no}', 0))
-            ot = float(request.POST.get(f'o_{sr_no}', 0))
-            
-            # Retrieve hidden metadata sent from ffr.html
-            dept = request.POST.get(f'dept_{sr_no}')
-            desig = request.POST.get(f'desig_{sr_no}')
-            scope = int(request.POST.get(f'scope_{sr_no}', 0))
+            for p_key in present_keys:
+                sr_no = p_key.split('_')[1]
+                try:
+                    # Logic to ensure we save to the correct site
+                    row_site = request.POST.get(f'site_{sr_no}') or form_site
+                    dept = request.POST.get(f'dept_{sr_no}')
+                    desig = request.POST.get(f'desig_{sr_no}')
 
-            # Update existing record for that day/site/designation or create a new one
-            ManpowerEntry.objects.update_or_create(
-                date=report_date,
-                site=selected_site,
-                department=dept,
-                designation=desig,
-                defaults={
-                    'scope': scope,
-                    'present': present,
-                    'absent': absent,
-                    'weekly_off': wo,
-                    'overtime': ot
-                }
-            )
+                    ManpowerEntry.objects.update_or_create(
+                        date=form_date,
+                        site=row_site,
+                        department=dept,
+                        designation=desig,
+                        defaults={
+                            'skill_level': request.POST.get(f'skill_{sr_no}'),
+                            'scope': int(request.POST.get(f'scope_{sr_no}', 0)),
+                            'present': int(request.POST.get(f'p_{sr_no}', 0)),
+                            'absent': int(request.POST.get(f'a_{sr_no}', 0)),
+                            'weekly_off': int(request.POST.get(f'w_{sr_no}', 0)),
+                            'overtime': int(request.POST.get(f'o_{sr_no}', 0)),
+                            'remarks': request.POST.get(f'rem_{sr_no}', "")
+                        }
+                    )
+                except Exception as e:
+                    continue
 
-        messages.success(request, f"FFR Report for {selected_site} saved successfully!")
-        return redirect('FFR')
+            messages.success(request, f"FFR Records for {form_site} saved successfully.")
+            return redirect(f"/FFR/?site_selection={form_site}&report_date={form_date}")
 
-    # GET request: Render the ffr.html template from your structure
     return render(request, 'ffr.html', {
-        'current_date': str(date.today())
+        'entries': entries_for_date,
+        'selected_site': selected_site,
+        'report_date': report_date,
     })
+
+@login_required(login_url='login')
+def export_ffr_all(request):
+    site_filter = request.GET.get('site_selection', 'ALL')
+    date_filter = request.GET.get('report_date')
+
+    queryset = ManpowerEntry.objects.all()
+    if site_filter != 'ALL':
+        queryset = queryset.filter(site=site_filter)
+    if date_filter:
+        queryset = queryset.filter(date=date_filter)
+
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "FFR Ledger"
+
+    headers = ['Date', 'Site', 'Dept', 'Designation', 'Skill', 'Scope', 'P', 'A', 'Abs%', 'W/O', 'OT', 'FFR%', 'Remarks']
+    sheet.append(headers)
+
+    for record in queryset:
+        # Use getattr to prevent crash if property is missing
+        ff = getattr(record, 'ff_ratio', 0)
+        ab = getattr(record, 'absent_ratio', 0)
+        
+        sheet.append([
+            str(record.date), record.site, record.department, record.designation,
+            record.skill_level, record.scope, record.present, record.absent,
+            f"{ab}%", record.weekly_off, record.overtime, f"{ff}%", record.remarks or ""
+        ])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="FFR_Report.xlsx"'
+    workbook.save(response)
+    return response
 @login_required(login_url='login')
 def employee_list(request):
     """

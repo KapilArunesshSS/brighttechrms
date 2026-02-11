@@ -99,7 +99,12 @@ class Employee(models.Model):
             
         super(Employee, self).save(*args, **kwargs)
 
+
 class ManpowerEntry(models.Model):
+    """
+    Stores daily attendance records. 
+    Identification constants: date, site, department, designation.
+    """
     date = models.DateField()
     site = models.CharField(max_length=100)
     department = models.CharField(max_length=100)
@@ -107,18 +112,26 @@ class ManpowerEntry(models.Model):
     skill_level = models.CharField(max_length=10)
     scope = models.IntegerField(help_text="The required manpower count")
     
-    # User Input Fields
+    # Daily Input Fields (Variable)
     present = models.IntegerField(default=0)
     absent = models.IntegerField(default=0)
     weekly_off = models.IntegerField(default=0)
-    overtime = models.IntegerField(default=0)
+    overtime = models.IntegerField(default=0) # Integer as requested
+    remarks = models.TextField(null=True, blank=True)
 
     @property
     def ff_ratio(self):
-        # Calculation: (Present / Scope) * 100
-        if self.scope > 0:
+        """Calculates Present percentage (FFR) as a property for templates/excel"""
+        if self.scope and self.scope > 0:
             return round((self.present / self.scope) * 100, 2)
-        return 0
+        return 0.00
+
+    @property
+    def absent_ratio(self):
+        """Calculates Absent percentage for reporting"""
+        if self.scope and self.scope > 0:
+            return round((self.absent / self.scope) * 100, 2)
+        return 0.00
 
     def __str__(self):
         return f"{self.date} - {self.site} - {self.designation}"
