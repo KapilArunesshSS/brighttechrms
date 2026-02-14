@@ -3,6 +3,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 import openpyxl
+from openpyxl.styles import Font
 from django.shortcuts import render, redirect , get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate , login as login_django , logout as logout_django
@@ -266,6 +267,7 @@ def edit_employee(request, employee_id):
 def export_to_excel(request):
     """
     Handles the logic for exporting the employee list to an .xlsx file.
+    Includes clickable hyperlinks for uploaded resumes.
     """
     # 1. Fetch all employee data
     employees = Employee.objects.all()
@@ -290,15 +292,20 @@ def export_to_excel(request):
     ]
     sheet.append(headers)
     
+    # Style the header row (Bold)
+    for cell in sheet[1]:
+        cell.font = Font(bold=True)
+    
     # 4. Loop through employees and add their data as rows
-        # Format the created_at date to be a simple string
-    for employee in employees:
+    for index, employee in enumerate(employees, start=2):
         resume_cell_value = "No File"
+        has_resume = False
+        
         if employee.resume:
-            # Get the full URL for the resume file
+            # IMPORTANT: Excel needs the full absolute URL (http://...)
             resume_url = request.build_absolute_uri(employee.resume.url)
-            # Create the Excel formula for a hyperlink
             resume_cell_value = f'=HYPERLINK("{resume_url}", "View Resume")'
+            has_resume = True
         
         row = [
             employee.ref_id,
@@ -314,6 +321,11 @@ def export_to_excel(request):
         ]
         sheet.append(row)
         
+        # If a resume exists, style that specific cell to look like a hyperlink
+        if has_resume:
+            resume_cell = sheet.cell(row=index, column=9) # Column 9 is 'RESUME'
+            resume_cell.font = Font(color="0000FF", underline="single")
+
     # 5. Create the HttpResponse object with the correct headers for an Excel file
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

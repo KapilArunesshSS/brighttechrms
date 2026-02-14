@@ -79,8 +79,10 @@
                 <div>
                     <label for="company" class="block text-sm font-medium text-slate-700 mb-1">Site</label>
                     <select id="company" name="company" required 
-                            class="block w-full px-4 py-2 text-slate-900 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <!-- Rule: Editable by EVERYONE (User, Staff, Superuser) -->
+                            class="block w-full px-4 py-2 text-slate-900 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            {% if user.is_staff and not user.is_superuser %}disabled{% endif %}>
+                            <!-- Rule: Editable by EVERYONE (User, Superuser) -->
+
                         <option value="BMM" {% if employee.company == 'BMM' %}selected{% endif %}>BMM</option>
                         <option value="SLR" {% if employee.company == 'SLR' %}selected{% endif %}>SLR</option>
                         <option value="ARJAS" {% if employee.company == 'ARJAS' %}selected{% endif %}>ARJAS</option>
@@ -90,6 +92,7 @@
                         <option value="COEGA" {% if employee.company == 'COEGA' %}selected{% endif %}>COEGA</option>
                         <option value="CD TECH" {% if employee.company == 'CD TECH' %}selected{% endif %}>CD TECH</option>
                     </select>
+                    
                 </div>
                 
                 <div>
