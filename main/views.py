@@ -20,39 +20,66 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 # @login_required(login_url='login')
 # def home(request):
 #     return render (request, 'home.html')
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from datetime import date
+# Import your models here
+
 @login_required(login_url='login')
 def FFR(request):
-    selected_site = request.GET.get('site_selection', 'ALL')
-    report_date = request.GET.get('report_date', str(date.today()))
+    user = request.user
+    
+    # FIX: Check user.email first, if blank, fall back to user.username
+    user_email = (user.email or user.username or "").lower().strip()
+    
+    # Exact mapping from your image
+    email_site_map = {
+        "admin.bmm@brighttech.net.in": "BMM",
+        "admin.slr@brighttech.net.in": "SLR",
+        "admin.jr@brighttech.net.in": "JAIRAJ",
+        "admin.arj@brighttech.net.in": "Arjas",
+        "pm.ms@brighttech.net.in": "MSSSL",
+        "admin.agni@brighttech.net.in": "AGNI",
+    }
 
-    # FIX: Fetch ALL entries for the date so Indicators stay green
-    entries_for_date = ManpowerEntry.objects.filter(date=report_date)
+    requested_site = request.GET.get('site_selection', 'ALL')
+    
+    # Access Control Logic
+    if user.is_superuser:
+        selected_site = requested_site
+    else:
+        # Assign site based on email, default to "NONE"
+        selected_site = email_site_map.get(user_email, "NONE")
+
+    report_date = request.GET.get('report_date', str(date.today()))
+    
+    # Filter entries
+    if selected_site == "ALL":
+        entries = ManpowerEntry.objects.filter(date=report_date)
+    else:
+        entries = ManpowerEntry.objects.filter(date=report_date, site=selected_site)
 
     if request.method == "POST":
-        form_site = request.POST.get('site_selection')
-        form_date = request.POST.get('report_date')
-
-        if 'delete_all_database' in request.POST:
-            ManpowerEntry.objects.all().delete()
-            messages.success(request, "Database reset successfully.")
-            return redirect('FFR')
-
+        form_date = request.POST.get('report_date', report_date)
+        
         if 'save_data' in request.POST:
             present_keys = [k for k in request.POST.keys() if k.startswith('p_')]
             
             for p_key in present_keys:
                 sr_no = p_key.split('_')[1]
                 try:
-                    # Logic to ensure we save to the correct site
-                    row_site = request.POST.get(f'site_{sr_no}') or form_site
-                    dept = request.POST.get(f'dept_{sr_no}')
-                    desig = request.POST.get(f'desig_{sr_no}')
+                    row_site = request.POST.get(f'site_{sr_no}')
+                    
+                    # Security: Only allow save if row_site matches selected_site (or if superuser)
+                    if not user.is_superuser and row_site != selected_site:
+                        continue
 
                     ManpowerEntry.objects.update_or_create(
                         date=form_date,
                         site=row_site,
-                        department=dept,
-                        designation=desig,
+                        department=request.POST.get(f'dept_{sr_no}'),
+                        designation=request.POST.get(f'desig_{sr_no}'),
                         defaults={
                             'skill_level': request.POST.get(f'skill_{sr_no}'),
                             'scope': int(request.POST.get(f'scope_{sr_no}', 0)),
@@ -63,18 +90,19 @@ def FFR(request):
                             'remarks': request.POST.get(f'rem_{sr_no}', "")
                         }
                     )
-                except Exception as e:
+                except Exception:
                     continue
 
-            messages.success(request, f"FFR Records for {form_site} saved successfully.")
-            return redirect(f"/FFR/?site_selection={form_site}&report_date={form_date}")
+            messages.success(request, f"FFR Records for {selected_site} updated successfully.")
+            return redirect(f"/FFR/?site_selection={selected_site}&report_date={form_date}")
 
     return render(request, 'ffr.html', {
-        'entries': entries_for_date,
+        'entries': entries,
         'selected_site': selected_site,
         'report_date': report_date,
+        'user_email': user_email,
+        'is_superuser': user.is_superuser,
     })
-
 @login_required(login_url='login')
 def export_ffr_all(request):
     site_filter = request.GET.get('site_selection', 'ALL')

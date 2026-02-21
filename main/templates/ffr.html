@@ -106,7 +106,7 @@
         <div class="stat-item"><span class="stat-label">Avg. Absent %</span><span class="stat-value" id="disp-avg-abs" style="color: var(--danger);">0.00%</span></div>
     </div>
 
-    <form method="GET" id="filterForm" class="controls">
+    <form method="GET" action="{% url 'FFR' %}" id="filterForm" class="controls">
         <div class="control-group">
             <label>Report Date</label>
             <input type="date" name="report_date" id="report_date" value="{{ report_date }}" onchange="this.form.submit()">
@@ -114,13 +114,23 @@
         <div class="control-group">
             <label>Site Selection</label>
             <select name="site_selection" id="site_filter" onchange="this.form.submit()">
-                <option value="ALL" {% if selected_site == 'ALL' %}selected{% endif %}>All Sites (Global)</option>
-                <option value="BMM" {% if selected_site == 'BMM' %}selected{% endif %}>BMM</option>
-                <option value="JAIRAJ" {% if selected_site == 'JAIRAJ' %}selected{% endif %}>JAIRAJ</option>
-                <option value="MSSSL" {% if selected_site == 'MSSSL' %}selected{% endif %}>MSSSL</option>
-                <option value="Arjas" {% if selected_site == 'Arjas' %}selected{% endif %}>Arjas</option>
-                <option value="SLR" {% if selected_site == 'SLR' %}selected{% endif %}>SLR</option>
-                <option value="AGNI" {% if selected_site == 'AGNI' %}selected{% endif %}>AGNI</option>
+                
+                {% if is_superuser %}
+                    <option value="ALL" {% if selected_site == 'ALL' %}selected{% endif %}>All Sites (Global)</option>
+                    <option value="BMM" {% if selected_site == 'BMM' %}selected{% endif %}>BMM</option>
+                    <option value="JAIRAJ" {% if selected_site == 'JAIRAJ' %}selected{% endif %}>JAIRAJ</option>
+                    <option value="MSSSL" {% if selected_site == 'MSSSL' %}selected{% endif %}>MSSSL</option>
+                    <option value="Arjas" {% if selected_site == 'Arjas' %}selected{% endif %}>Arjas</option>
+                    <option value="SLR" {% if selected_site == 'SLR' %}selected{% endif %}>SLR</option>
+                    <option value="AGNI" {% if selected_site == 'AGNI' %}selected{% endif %}>AGNI</option>
+                {% else %}
+                    {% if selected_site != "NONE" %}
+                        <option value="{{ selected_site }}" selected>{{ selected_site }}</option>
+                    {% else %}
+                        <option value="" disabled selected>Unauthorized</option>
+                    {% endif %}
+                {% endif %}
+                
             </select>
         </div>
     </form>

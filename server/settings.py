@@ -20,7 +20,6 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 # Allow your GoDaddy domain and the AWS internal host
-# Ensure ALLOWED_HOSTS=yourdomain.com,localhost,127.0.0.1 in your .env
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
 # Application definition
@@ -31,15 +30,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Professional Storage (Required for Amazon S3)
     'storages', 
-    # Your app
     'main.apps.MainConfig',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # Handles static files in production
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -68,30 +65,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'server.wsgi.application'
 
-# Database Configuration (AWS RDS & Local Fallback)
+# Database Configuration
 DATABASE_URL = os.getenv("DATABASE_URL")
-
 if DATABASE_URL:
     DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=True
-        )
+        "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
     }
 else:
-    # Fallback to manual config (optional)
     DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("DB_NAME"),
-            "USER": os.getenv("DB_USER"),
-            "PASSWORD": os.getenv("DB_PASSWORD"),
-            "HOST": os.getenv("DB_HOST"),
-            "PORT": os.getenv("DB_PORT", "5432"),
-            "OPTIONS": {
-                "sslmode": "require" if os.getenv("DB_HOST") and "amazonaws.com" in os.getenv("DB_HOST") else "disable",
-            },
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 
@@ -111,39 +95,52 @@ USE_TZ = True
 
 # --- STATIC & MEDIA FILE HANDLING ---
 
-# 1. Static Files (CSS, Images, JS)
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-# Whitenoise serves static files fast and efficiently in production
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
-# 2. Media Files (Resumes & Offer Letters)
-# This block detects if you have AWS keys in your .env. 
-# If yes, it uploads to S3. If no, it stays on your MacBook.
+# --- AWS S3 & MEDIA CONFIGURATION ---
+# Check for AWS keys in .env
 if os.getenv('AWS_ACCESS_KEY_ID'):
-
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME')
 
+    AWS_S3_FILE_OVERWRITE = False
     AWS_DEFAULT_ACL = None
-    AWS_S3_OBJECT_PARAMETERS = {
-        'CacheControl': 'max-age=86400',
-    }
+    AWS_S3_VERIFY = True
+    AWS_QUERYSTRING_AUTH = False  # Set to False to allow public URLs without tokens
 
     AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
 
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-
-    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+    # MODERN STORAGES CONFIGURATION (Django 4.2+)
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "location": "media",  # All uploads go into the 'media/' folder
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+    
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
 
 else:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+    
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 
-# CSRF Settings for Production (Crucial for your GoDaddy domain)
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://127.0.0.1").split(",")
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
