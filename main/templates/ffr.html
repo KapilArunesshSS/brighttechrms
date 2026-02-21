@@ -57,12 +57,12 @@
         .ffr-cell { font-weight: 800; color: var(--accent); }
         .abs-pct-cell { font-weight: 800; color: var(--danger); }
         
-        .action-bar { margin-top: 25px; display: flex; justify-content: space-between; align-items: center; padding-top: 20px; border-top: 2px solid #eee; }
+        /* Fixed alignement to flex-end after removing the reset button */
+        .action-bar { margin-top: 25px; display: flex; justify-content: flex-end; align-items: center; padding-top: 20px; border-top: 2px solid #eee; }
         .btn-group { display: flex; gap: 15px; align-items: center; }
         .btn { border: none; padding: 12px 28px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: all 0.3s; font-size: 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
         .btn-download-all { background: var(--warning); color: white; }
         .btn-save { background: var(--success); color: white; box-shadow: 0 4px 10px rgba(39, 174, 96, 0.2); }
-        .btn-delete { background: var(--danger); color: white; }
         .btn:hover { opacity: 0.9; transform: translateY(-2px); }
 
         .badge { padding: 4px 8px; border-radius: 5px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
@@ -74,6 +74,7 @@
         .alert { padding: 15px 20px; margin-bottom: 25px; border-radius: 8px; font-weight: 600; border: 1px solid transparent; }
         .alert-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
     </style>
+    <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
 </head>
 <body>
 
@@ -166,9 +167,7 @@
         </div>
 
         <div class="action-bar">
-            <div class="btn-group">
-                <button type="submit" name="delete_all_database" class="btn btn-delete" onclick="return confirm('WARNING: This will permanently wipe ALL history in the database ledger. Continue?')">Reset Database Ledger</button>
-            </div>
+            <!-- Reset Database Ledger button removed -->
             <div class="btn-group">
                 <button type="submit" name="save_data" class="btn btn-save" {% if selected_site == "ALL" %}disabled title="Switch to a specific site to save records."{% endif %}>Save Site Record</button>
             </div>
@@ -423,7 +422,7 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${p.sr}</td>
-                <td style="font-weight: 700; color: #7f8c8d;">${p.site}</td>
+                <td style="font-weight: 700; color: #7f8c8d;">${p.site}<input type="hidden" name="site_${p.sr}" value="${p.site}"></td>
                 <td>${p.dept}<input type="hidden" name="dept_${p.sr}" value="${p.dept}"></td>
                 <td>${p.desig}<input type="hidden" name="desig_${p.sr}" value="${p.desig}"></td>
                 <td>${getBadge(p.skill)}<input type="hidden" name="skill_${p.sr}" value="${p.skill}"></td>
