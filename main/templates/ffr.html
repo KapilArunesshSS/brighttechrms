@@ -32,7 +32,8 @@
         .dot-green { background: var(--success); box-shadow: 0 0 5px var(--success); }
         .dot-red { background: var(--danger); box-shadow: 0 0 5px var(--danger); }
 
-        .stats-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; background: #eef2f3; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 6px solid var(--accent); }
+        /* CHANGED: grid-template-columns changed to 5 to fit OT Man Days */
+        .stats-banner { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; background: #eef2f3; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 6px solid var(--accent); }
         .stat-item { display: flex; flex-direction: column; }
         .stat-label { font-size: 0.75rem; color: #7f8c8d; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
         .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); margin-top: 5px; }
@@ -106,6 +107,8 @@
         <div class="stat-item"><span class="stat-label">Total Site Scope</span><span class="stat-value" id="disp-scope">0</span></div>
         <div class="stat-item"><span class="stat-label">Avg. Site FFR %</span><span class="stat-value" id="disp-avg-ffr" style="color: var(--success);">0.00%</span></div>
         <div class="stat-item"><span class="stat-label">Avg. Absent %</span><span class="stat-value" id="disp-avg-abs" style="color: var(--danger);">0.00%</span></div>
+        <!-- ADDED: OT Man Days Output -->
+        <div class="stat-item"><span class="stat-label">OT Man Days</span><span class="stat-value" id="disp-ot-mandays" style="color: var(--warning);">0.00</span></div>
     </div>
 
     <form method="GET" action="{% url 'FFR' %}" id="filterForm" class="controls">
@@ -434,7 +437,8 @@
                 <td class="input-cell"><input type="number" name="a_${p.sr}" oninput="update()" value="${db ? db.a : 0}"></td>
                 <td class="abs-pct-cell" id="ap_${p.sr}">0%</td>
                 <td class="input-cell"><input type="number" name="w_${p.sr}" value="${db ? db.w : 0}"></td>
-                <td class="input-cell"><input type="number" name="o_${p.sr}" value="${db ? db.o : 0}"></td>
+                <!-- ADDED: oninput="update()" so stats update instantly when OT is typed -->
+                <td class="input-cell"><input type="number" name="o_${p.sr}" oninput="update()" value="${db ? db.o : 0}"></td>
                 <td class="ffr-cell" id="fr_${p.sr}">0%</td>
                 <td class="remark-cell"><input type="text" name="rem_${p.sr}" value="${db ? db.rem : ''}" placeholder="..."></td>
             `;
@@ -445,10 +449,14 @@
     }
 
     function update() {
-        let ts = 0, tp = 0, ta = 0;
+        // ADDED: 'tot' variable to track Total Overtime Hours
+        let ts = 0, tp = 0, ta = 0, tot = 0;
+        
         currentProfiles.forEach(r => {
             const pVal = parseInt(document.querySelector(`input[name="p_${r.sr}"]`).value) || 0;
             const aVal = parseInt(document.querySelector(`input[name="a_${r.sr}"]`).value) || 0;
+            // ADDED: Capture overtime input field value
+            const oVal = parseFloat(document.querySelector(`input[name="o_${r.sr}"]`).value) || 0;
             
             const frVal = r.scope > 0 ? ((pVal / r.scope) * 100).toFixed(2) : "0.00";
             const apVal = r.scope > 0 ? ((aVal / r.scope) * 100).toFixed(2) : "0.00";
@@ -456,12 +464,16 @@
             document.getElementById(`fr_${r.sr}`).innerText = frVal + '%';
             document.getElementById(`ap_${r.sr}`).innerText = apVal + '%';
             
-            ts += r.scope; tp += pVal; ta += aVal;
+            // ADDED: Add OT to total tally
+            ts += r.scope; tp += pVal; ta += aVal; tot += oVal;
         });
 
         document.getElementById('disp-scope').innerText = ts;
         document.getElementById('disp-avg-ffr').innerText = (ts > 0 ? ((tp / ts) * 100).toFixed(2) : "0.00") + '%';
         document.getElementById('disp-avg-abs').innerText = (ts > 0 ? ((ta / ts) * 100).toFixed(2) : "0.00") + '%';
+        
+        // ADDED: Calculate OT Man Days (Total OT Hours divided by standard 8-hour shift)
+        document.getElementById('disp-ot-mandays').innerText = (tot / 8).toFixed(2);
     }
 
     function validateAndExport() {
