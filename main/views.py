@@ -28,81 +28,87 @@ from datetime import date
 
 @login_required(login_url='login')
 def FFR(request):
-    user = request.user
-    
-    # FIX: Check user.email first, if blank, fall back to user.username
-    user_email = (user.email or user.username or "").lower().strip()
-    
-    # Exact mapping from your image
-    email_site_map = {
-        "admin.bmm@brighttech.net.in": "BMM",
-        "admin.slr@brighttech.net.in": "SLR",
-        "admin.jr@brighttech.net.in": "JAIRAJ",
-        "admin.arj@brighttech.net.in": "Arjas",
-        "pm.ms@brighttech.net.in": "MSSSL",
-        "admin.agni@brighttech.net.in": "AGNI",
-    }
+    # ==========================================
+    # 1. HANDLE POST REQUEST (SAVING DATA)
+    # ==========================================
+    if request.method == 'POST':
+        report_date = request.POST.get('report_date')
+        site_selection = request.POST.get('site_selection')
 
-    requested_site = request.GET.get('site_selection', 'ALL')
-    
-    # Access Control Logic
-    if user.is_superuser:
-        selected_site = requested_site
-    else:
-        # Assign site based on email, default to "NONE"
-        selected_site = email_site_map.get(user_email, "NONE")
+        # Iterate through the submitted form data
+        # We look for keys starting with 'site_' to identify row numbers (sr)
+        for key in request.POST.keys():
+            if key.startswith('site_'):
+                sr = key.split('_')[1] # Extract the SR number (e.g., "1" from "site_1")
+                
+                # Fetch row data
+                site = request.POST.get(f'site_{sr}')
+                dept = request.POST.get(f'dept_{sr}')
+                desig = request.POST.get(f'desig_{sr}')
+                skill = request.POST.get(f'skill_{sr}')
+                scope = request.POST.get(f'scope_{sr}', 0)
+                
+                p = request.POST.get(f'p_{sr}', 0)
+                a = request.POST.get(f'a_{sr}', 0)
+                w = request.POST.get(f'w_{sr}', 0)
+                o = request.POST.get(f'o_{sr}', 0)
+                rem = request.POST.get(f'rem_{sr}', '')
 
-    report_date = request.GET.get('report_date', str(date.today()))
-    
-    # Filter entries
-    if selected_site == "ALL":
-        entries = ManpowerEntry.objects.filter(date=report_date)
-    else:
-        entries = ManpowerEntry.objects.filter(date=report_date, site=selected_site)
-
-    if request.method == "POST":
-        form_date = request.POST.get('report_date', report_date)
+                # Update existing record or create a new one
+                ManpowerEntry.objects.update_or_create(
+                    date=report_date,
+                    site=site,
+                    department=dept,
+                    designation=desig,
+                    defaults={
+                        'skill_level': skill,
+                        'scope': int(scope) if scope else 0,
+                        'present': int(p) if p else 0,
+                        'absent': int(a) if a else 0,
+                        'weekly_off': int(w) if w else 0,
+                        'overtime': int(o) if o else 0,
+                        'remarks': rem
+                    }
+                )
         
-        if 'save_data' in request.POST:
-            present_keys = [k for k in request.POST.keys() if k.startswith('p_')]
-            
-            for p_key in present_keys:
-                sr_no = p_key.split('_')[1]
-                try:
-                    row_site = request.POST.get(f'site_{sr_no}')
-                    
-                    # Security: Only allow save if row_site matches selected_site (or if superuser)
-                    if not user.is_superuser and row_site != selected_site:
-                        continue
+        # Show success message and refresh the page with the same parameters
+        messages.success(request, f"Records for {site_selection} on {report_date} saved successfully!")
+        
+        # Adjust the redirect URL pattern name if your urls.py uses a different name
+        return redirect(f'/FFR/?report_date={report_date}&site_selection={site_selection}')
 
-                    ManpowerEntry.objects.update_or_create(
-                        date=form_date,
-                        site=row_site,
-                        department=request.POST.get(f'dept_{sr_no}'),
-                        designation=request.POST.get(f'desig_{sr_no}'),
-                        defaults={
-                            'skill_level': request.POST.get(f'skill_{sr_no}'),
-                            'scope': int(request.POST.get(f'scope_{sr_no}', 0)),
-                            'present': int(request.POST.get(f'p_{sr_no}', 0)),
-                            'absent': int(request.POST.get(f'a_{sr_no}', 0)),
-                            'weekly_off': int(request.POST.get(f'w_{sr_no}', 0)),
-                            'overtime': int(request.POST.get(f'o_{sr_no}', 0)),
-                            'remarks': request.POST.get(f'rem_{sr_no}', "")
-                        }
-                    )
-                except Exception:
-                    continue
+    # ==========================================
+    # 2. HANDLE GET REQUEST (DISPLAYING DATA)
+    # ==========================================
+    
+    # Get parameters from the URL. Fixed datetime import issue here!
+    report_date = request.GET.get('report_date', str(date.today()))
+    selected_site = request.GET.get('site_selection', 'ALL')
 
-            messages.success(request, f"FFR Records for {selected_site} updated successfully.")
-            return redirect(f"/FFR/?site_selection={selected_site}&report_date={form_date}")
+    # Fetch EVERY record for the date, regardless of the site.
+    # This powers the top indicators so they don't say "PENDING"
+    all_entries = ManpowerEntry.objects.filter(date=report_date)
 
-    return render(request, 'ffr.html', {
-        'entries': entries,
+    # Filter the records specifically for the table
+    if selected_site != 'ALL' and selected_site != 'NONE':
+        entries = all_entries.filter(site=selected_site)
+    else:
+        entries = all_entries
+
+    # Check privileges (Make sure your auth setup is standard)
+    is_superuser = request.user.is_superuser if request.user.is_authenticated else False
+
+    # Pass BOTH datasets to the template
+    context = {
         'selected_site': selected_site,
         'report_date': report_date,
-        'user_email': user_email,
-        'is_superuser': user.is_superuser,
-    })
+        'entries': entries,          # Used by the table
+        'all_entries': all_entries,  # Used by the top indicators
+        'is_superuser': is_superuser,
+    }
+
+    return render(request, 'ffr.html', context)
+
 @login_required(login_url='login')
 def export_ffr_all(request):
     site_filter = request.GET.get('site_selection', 'ALL')

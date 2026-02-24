@@ -355,8 +355,9 @@
         {sr:162, site:"AGNI", dept:"STAFF - SUPPLY", desig:"ADMIN", skill:"HSK", scope:1}
     ];
 
+    // UPDATED: Now looks for all_entries first, gracefully falling back to entries.
     const dbEntries = [
-        {% for e in entries %}
+        {% for e in all_entries|default:entries %}
         {
             site: "{{ e.site|escapejs }}",
             dept: "{{ e.department|escapejs }}", desig: "{{ e.designation|escapejs }}",
@@ -413,7 +414,7 @@
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = '';
         
-        // Show all if "ALL" is selected, otherwise filter
+        // This line ensures the table ONLY displays the filtered site!
         currentProfiles = (site === "ALL") ? masterData : masterData.filter(d => d.site === site);
 
         currentProfiles.forEach((p) => {
