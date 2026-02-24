@@ -40,30 +40,31 @@ def FFR(request):
     user = request.user
     # Get user email safely (check email first, fallback to username, make lowercase)
     user_email = (user.email or user.username or "").lower().strip()
-    
-    # Check what site they requested from the URL
-    requested_site = request.GET.get('site_selection', 'ALL')
+    is_superuser = user.is_superuser
+
+    # FIX: Read parameters from POST if submitting, otherwise GET
+    if request.method == 'POST':
+        requested_site = request.POST.get('site_selection', 'ALL')
+        report_date = request.POST.get('report_date', str(date.today()))
+    else:
+        requested_site = request.GET.get('site_selection', 'ALL')
+        report_date = request.GET.get('report_date', str(date.today()))
     
     # ------------------------------------------
     # ACCESS CONTROL LOGIC
     # ------------------------------------------
-    is_superuser = user.is_superuser
     if is_superuser:
         selected_site = requested_site
     else:
         # Force the site based on their email mapping
         selected_site = EMAIL_SITE_MAP.get(user_email, "NONE")
 
-    report_date = request.GET.get('report_date', str(date.today()))
-
     # ==========================================
     # 1. HANDLE POST REQUEST (SAVING DATA)
     # ==========================================
     if request.method == 'POST':
-        form_date = request.POST.get('report_date')
         
         # Find all keys that start with 'p_' (Present count). 
-        # This safely ensures we only get table row numbers (sr) and ignore dropdowns.
         present_keys = [k for k in request.POST.keys() if k.startswith('p_')]
         
         for p_key in present_keys:
@@ -88,7 +89,6 @@ def FFR(request):
             rem = request.POST.get(f'rem_{sr}', '')
 
             defaults_dict = {
-                'skill_level': skill,
                 'scope': int(scope) if scope else 0,
                 'present': int(p) if p else 0,
                 'absent': int(a) if a else 0,
@@ -98,34 +98,35 @@ def FFR(request):
             }
 
             try:
-                # Update existing record or create a new one
+                # CRITICAL FIX: 'skill_level=skill' MUST be in the lookup query, 
+                # otherwise rows with the same designation but different skills overwrite each other!
                 ManpowerEntry.objects.update_or_create(
-                    date=form_date,
+                    date=report_date,
                     site=row_site,
                     department=dept,
                     designation=desig,
+                    skill_level=skill,  # <-- ADDED HERE
                     defaults=defaults_dict
                 )
             except ManpowerEntry.MultipleObjectsReturned:
-                # FIX: Handle cases where previous bugs created duplicate rows in the database
+                # Clean up duplicate glitches from previous bugs
                 duplicates = ManpowerEntry.objects.filter(
-                    date=form_date,
+                    date=report_date,
                     site=row_site,
                     department=dept,
-                    designation=desig
+                    designation=desig,
+                    skill_level=skill
                 )
                 
-                # Keep the first record and delete all the corrupted duplicate ones
                 first_record = duplicates.first()
                 duplicates.exclude(pk=first_record.pk).delete()
                 
-                # Apply the current updates to the single remaining record
                 for key, value in defaults_dict.items():
                     setattr(first_record, key, value)
                 first_record.save()
         
-        messages.success(request, f"Records for {selected_site} on {form_date} saved successfully!")
-        return redirect(f'/FFR/?report_date={form_date}&site_selection={selected_site}')
+        messages.success(request, f"Records for {selected_site} on {report_date} saved successfully!")
+        return redirect(f'/FFR/?report_date={report_date}&site_selection={selected_site}')
 
     # ==========================================
     # 2. HANDLE GET REQUEST (DISPLAYING DATA)
@@ -144,8 +145,9 @@ def FFR(request):
         'entries': entries,          
         'all_entries': all_entries,  
         'is_superuser': is_superuser,
-        'user_email': user_email, # Pass this to HTML for UI logic
+        'user_email': user_email, 
     }
+    return render(request, 'ffr.html', context)
 
     return render(request, 'ffr.html', context)
 @login_required(login_url='login')

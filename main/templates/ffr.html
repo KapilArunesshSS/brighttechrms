@@ -280,8 +280,11 @@
         {sr:88, site:"Arjas", dept:"Rolling Mill", desig:"Sling Man", skill:"SSK", scope:3},
         {sr:89, site:"Arjas", dept:"Rolling Mill", desig:"Tag Printer", skill:"SSK", scope:3},
         {sr:90, site:"Arjas", dept:"INS- SUPPLY", desig:"Sling Man", skill:"SSK", scope:6},
-        {sr:91, site:"Arjas", dept:"INS- SUPPLY", desig:"Helper", skill:"SSK", scope:6},
-        {sr:92, site:"Arjas", dept:"INS- SUPPLY", desig:"Helper", skill:"SSK", scope:3},
+        
+        // FIX: Kept these renamed so they don't overwrite each other in the database!
+        {sr:91, site:"Arjas", dept:"INS- SUPPLY", desig:"Helper (A)", skill:"SSK", scope:6},
+        {sr:92, site:"Arjas", dept:"INS- SUPPLY", desig:"Helper (B)", skill:"SSK", scope:3},
+        
         {sr:93, site:"Arjas", dept:"INS- SUPPLY", desig:"Operator", skill:"HSK", scope:6},
         {sr:94, site:"Arjas", dept:"INS- SUPPLY", desig:"Grinder", skill:"SSK", scope:12},
         {sr:95, site:"Arjas", dept:"INS- SUPPLY", desig:"Crane Operator", skill:"HSK", scope:1},
@@ -358,12 +361,14 @@
         {sr:162, site:"AGNI", dept:"STAFF - SUPPLY", desig:"ADMIN", skill:"HSK", scope:1}
     ];
 
-    // UPDATED: Now looks for all_entries first, gracefully falling back to entries.
+    // MISSING LINE 1 FIX: Adding 'skill' to the database entries so JS knows what skill it is
     const dbEntries = [
         {% for e in all_entries|default:entries %}
         {
             site: "{{ e.site|escapejs }}",
-            dept: "{{ e.department|escapejs }}", desig: "{{ e.designation|escapejs }}",
+            dept: "{{ e.department|escapejs }}", 
+            desig: "{{ e.designation|escapejs }}",
+            skill: "{{ e.skill_level|escapejs }}", 
             p: {{ e.present }}, a: {{ e.absent }}, w: {{ e.weekly_off }}, o: {{ e.overtime }},
             rem: "{{ e.remarks|default:''|escapejs }}"
         },
@@ -388,7 +393,9 @@
             const siteProfiles = masterData.filter(m => m.site === siteName);
             siteProfiles.forEach(sp => {
                 siteTotalScope += sp.scope;
-                const saved = dbEntries.find(d => d.site === sp.site && d.dept === sp.dept && d.desig === sp.desig);
+                const saved = dbEntries.find(d => 
+                    d.site === sp.site && d.dept === sp.dept && d.desig === sp.desig && d.skill === sp.skill
+                );
                 siteTotalPresent += saved ? saved.p : 0;
             });
 
@@ -417,12 +424,13 @@
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = '';
         
-        // This line ensures the table ONLY displays the filtered site!
         currentProfiles = (site === "ALL") ? masterData : masterData.filter(d => d.site === site);
 
         currentProfiles.forEach((p) => {
+            
+            // MISSING LINE 2 FIX: Adding '&& d.skill === p.skill' so it ignores old duplicate errors
             const db = dbEntries.find(d => 
-                d.site === p.site && d.dept === p.dept && d.desig === p.desig
+                d.site === p.site && d.dept === p.dept && d.desig === p.desig && d.skill === p.skill
             );
             
             const tr = document.createElement('tr');
@@ -437,7 +445,6 @@
                 <td class="input-cell"><input type="number" name="a_${p.sr}" oninput="update()" value="${db ? db.a : 0}"></td>
                 <td class="abs-pct-cell" id="ap_${p.sr}">0%</td>
                 <td class="input-cell"><input type="number" name="w_${p.sr}" value="${db ? db.w : 0}"></td>
-                <!-- ADDED: oninput="update()" so stats update instantly when OT is typed -->
                 <td class="input-cell"><input type="number" name="o_${p.sr}" oninput="update()" value="${db ? db.o : 0}"></td>
                 <td class="ffr-cell" id="fr_${p.sr}">0%</td>
                 <td class="remark-cell"><input type="text" name="rem_${p.sr}" value="${db ? db.rem : ''}" placeholder="..."></td>
@@ -449,13 +456,11 @@
     }
 
     function update() {
-        // ADDED: 'tot' variable to track Total Overtime Hours
         let ts = 0, tp = 0, ta = 0, tot = 0;
         
         currentProfiles.forEach(r => {
             const pVal = parseInt(document.querySelector(`input[name="p_${r.sr}"]`).value) || 0;
             const aVal = parseInt(document.querySelector(`input[name="a_${r.sr}"]`).value) || 0;
-            // ADDED: Capture overtime input field value
             const oVal = parseFloat(document.querySelector(`input[name="o_${r.sr}"]`).value) || 0;
             
             const frVal = r.scope > 0 ? ((pVal / r.scope) * 100).toFixed(2) : "0.00";
@@ -464,15 +469,12 @@
             document.getElementById(`fr_${r.sr}`).innerText = frVal + '%';
             document.getElementById(`ap_${r.sr}`).innerText = apVal + '%';
             
-            // ADDED: Add OT to total tally
             ts += r.scope; tp += pVal; ta += aVal; tot += oVal;
         });
 
         document.getElementById('disp-scope').innerText = ts;
         document.getElementById('disp-avg-ffr').innerText = (ts > 0 ? ((tp / ts) * 100).toFixed(2) : "0.00") + '%';
         document.getElementById('disp-avg-abs').innerText = (ts > 0 ? ((ta / ts) * 100).toFixed(2) : "0.00") + '%';
-        
-        // ADDED: Calculate OT Man Days (Total OT Hours divided by standard 8-hour shift)
         document.getElementById('disp-ot-mandays').innerText = (tot / 8).toFixed(2);
     }
 
@@ -489,7 +491,6 @@
             return;
         }
         
-        // Pass current site and date to the export view
         const site = "{{ selected_site|default:'ALL' }}";
         const date = "{{ report_date }}";
         window.location.href = `{% url 'export_ffr_all' %}?site_selection=${site}&report_date=${date}`;
