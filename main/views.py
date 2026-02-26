@@ -32,7 +32,7 @@ EMAIL_SITE_MAP = {
     "admin.bmm@brighttech.net.in": "BMM",
     "admin.slr@brighttech.net.in": "SLR",
     "admin.jr@brighttech.net.in": "JAIRAJ",
-    "admin.arjbb@brighttech.net.in": "Arjas",
+    "admin.arj@brighttech.net.in": "Arjas",
     "pm.ms@brighttech.net.in": "MSSSL",
     "admin.agni@brighttech.net.in": "AGNI",
 }
