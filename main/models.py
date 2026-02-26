@@ -71,30 +71,23 @@ class Employee(models.Model):
 
     def __str__(self):
         """
-        Returns a human-readable string representation of the Employee object,
-        which is useful in the Django admin interface and for debugging.
+        Returns a human-readable string representation of the Employee object.
         """
         return f"{self.ref_id}: {self.name}"
 
     def save(self, *args, **kwargs):
         """
-        Overrides the default save method to generate a custom employee ID
-        before the record is created.
+        Overrides the default save method to generate a custom employee ID.
         """
-        # Only generate an ID if the object is being created for the first time.
         if not self.pk:
-            # Get the last employee object from the database.
             last_employee = Employee.objects.all().order_by('id').last()
             
-            # If no employees exist, start with 1.
             if not last_employee:
                 new_id_num = 1
             else:
-                # Extract the number from the last ID (e.g., 'RMS0001' -> 1) and increment it.
-                last_id_num = int(last_employee.ref_id[3:]) # Get characters after 'RMS'
+                last_id_num = int(last_employee.ref_id[3:]) 
                 new_id_num = last_id_num + 1
             
-            # Format the new ID with the "RMS" prefix and 4-digit zero padding.
             self.ref_id = f'RMS{str(new_id_num).zfill(4)}'
             
         super(Employee, self).save(*args, **kwargs)
@@ -116,12 +109,12 @@ class ManpowerEntry(models.Model):
     present = models.IntegerField(default=0)
     absent = models.IntegerField(default=0)
     weekly_off = models.IntegerField(default=0)
-    overtime = models.IntegerField(default=0) # Integer as requested
+    overtime = models.IntegerField(default=0) 
     remarks = models.TextField(null=True, blank=True)
 
     @property
     def ff_ratio(self):
-        """Calculates Present percentage (FFR) as a property for templates/excel"""
+        """Calculates Present percentage (FFR) for templates/excel"""
         if self.scope and self.scope > 0:
             return round((self.present / self.scope) * 100, 2)
         return 0.00

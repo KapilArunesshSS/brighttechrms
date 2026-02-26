@@ -219,56 +219,58 @@ def employee_list(request):
 def add_employee(request):
     """
     Handles the creation of a new employee.
-
-    - If the request method is GET, it displays the empty registration form.
-    - If the request method is POST, it processes the submitted form data,
-      saves the new employee to the database, and redirects to a success page.
+    Fixed: Explicitly handles the 'status' field when it's disabled in HTML.
     """
     if request.method == 'POST':
-        # --- Process Form Data ---
-        
-        # Extracting data from the POST request
+        # 1. Extract data from POST
         name = request.POST.get('name')
         age = request.POST.get('age')
-        contact_number = request.POST.get('contact')
+        # Note: HTML name is 'contact', mapping it to contact_number
+        contact_number = request.POST.get('contact') 
         company = request.POST.get('company')
         role = request.POST.get('role')
+        
+        # 2. FIX FOR NULL STATUS: 
+        # If the field is disabled in HTML (non-staff), request.POST.get('status') is None.
+        # We must ensure it defaults to 'pending' here.
         status = request.POST.get('status')
+        if not status:
+            status = 'pending'
         
-        # The resume file is handled separately via request.FILES
+        # 3. Handle File Uploads
         resume = request.FILES.get('resume')
+        offer_letter = request.FILES.get('offer_letter')
 
+        # 4. Duplicate Check
         if Employee.objects.filter(contact_number=contact_number).exists():
-            # 2. If it exists, add an error message.
             messages.error(request, 'This contact number already exists. Please use a different one.')
-            # 3. Redirect back to the form so the user can see the message.
-            return redirect('employee_list')  # Assuming you have a URL named 'employee_list'
-        
-        # Create a new Employee instance with the form data
-        Employee.objects.create(
-            name=name,
-            age=age,
-            contact_number=contact_number,
-            company=company,
-            role=role,
-            status=status,
-            resume=resume
-        )
-        
+            return render(request, 'add_employee.html')
 
-        # Redirect to a new URL after successful submission.
-        # You should create a 'success' URL and template, 
-        # or redirect to an employee list page.
-        messages.success(request, 'Employee created successfully!')
-        return redirect('employee_list') # Assuming you have a URL named 'employee_list'
+        try:
+            # 5. Create instance
+            # We explicitly pass the status (which is now guaranteed to be 'pending' or higher)
+            Employee.objects.create(
+                name=name,
+                age=age,
+                contact_number=contact_number,
+                company=company,
+                role=role,
+                status=status,
+                resume=resume,
+                offer_letter=offer_letter
+            )
+            messages.success(request, 'Employee created successfully!')
+            return redirect('employee_list')
 
-    # --- Display Blank Form ---
-    
-    # If the request method is not POST (i.e., it's a GET request),
-    # simply render the HTML form template.
+        except IntegrityError as e:
+            messages.error(request, f'Database Error: {str(e)}')
+            return render(request, 'add_employee.html')
+        except Exception as e:
+            messages.error(request, f'An unexpected error occurred: {str(e)}')
+            return render(request, 'add_employee.html')
+
+    # GET request: Display blank form
     return render(request, 'add_employee.html')
-
-
 @login_required(login_url='login')
 def edit_employee(request, employee_id):
     # Get the specific employee object we want to edit
