@@ -274,72 +274,78 @@ def add_employee(request):
     return render(request, 'add_employee.html')
 @login_required(login_url='login')
 def edit_employee(request, employee_id):
-    # Get the specific employee object we want to edit
+    """
+    Handles updating an existing employee profile.
+    Safely handles fields that might be disabled in the HTML for certain users.
+    """
     employee = get_object_or_404(Employee, id=employee_id)
 
-    # --- This block runs when the user submits the "Update Profile" form ---
     if request.method == 'POST':
+        # --- 1. Safely update text fields ---
+        # Logic: Only update the model field if the key exists in POST.
+        # This prevents setting fields to NULL when they are disabled in the HTML.
         
-        # 1. Update all the text-based fields from the form
-        employee.name = request.POST.get('name')
-        employee.age = request.POST.get('age')
-        employee.contact_number = request.POST.get('contact')
-        employee.company = request.POST.get('company')
-        employee.role = request.POST.get('role')
-        employee.status = request.POST.get('status')
-        employee.remarks = request.POST.get('remarks')
+        fields_to_update = {
+            'name': 'name',
+            'age': 'age',
+            'contact': 'contact_number', # Mapping HTML 'contact' to Model 'contact_number'
+            'company': 'company',
+            'role': 'role',
+            'status': 'status',
+            'remarks': 'remarks'
+        }
 
-        # 2. Clean up conditional fields
-        # If status is not 'rejected', clear any old remarks
-        if employee.status != 'rejected':
-            employee.remarks = None # or '', depending on your model
+        for post_key, model_attr in fields_to_update.items():
+            value = request.POST.get(post_key)
+            if value is not None: # Field was present in submission (not disabled)
+                setattr(employee, model_attr, value)
+
+        # --- 2. Conditional Logic for Business Rules ---
         
-        # If status is not 'offered', clear any old offer letter
+        # Clear remarks if status is no longer rejected
+        if employee.status != 'rejected':
+            employee.remarks = None
+        
+        # Clear offer letter if status is no longer offered
         if employee.status != 'offered' and employee.offer_letter:
             employee.offer_letter.delete(save=False)
             employee.offer_letter = None
 
-        # --- 3. Handle the Offer Letter File ---
+        # --- 3. Handle File Deletions (Checkboxes) ---
         
-        # Check if the "delete_offer_letter" checkbox was ticked
-        if request.POST.get('delete_offer_letter'):
-            if employee.offer_letter:
-                employee.offer_letter.delete(save=False) # Delete file from storage
-                employee.offer_letter = None # Clear the field in the database
+        if request.POST.get('delete_offer_letter') and employee.offer_letter:
+            employee.offer_letter.delete(save=False)
+            employee.offer_letter = None
 
-        # Check if a *new* offer letter was uploaded
+        if request.POST.get('delete_resume') and employee.resume:
+            employee.resume.delete(save=False)
+            employee.resume = None
+
+        # --- 4. Handle New File Uploads ---
+        
         new_offer_letter = request.FILES.get('offer_letter')
         if new_offer_letter:
             if employee.offer_letter:
-                employee.offer_letter.delete(save=False) # Delete the old one first
-            employee.offer_letter = new_offer_letter # Save the new one
+                employee.offer_letter.delete(save=False)
+            employee.offer_letter = new_offer_letter
 
-        # --- 4. Handle the Resume File ---
-        
-        # Check if the "delete_resume" checkbox was ticked
-        if request.POST.get('delete_resume'):
-            if employee.resume:
-                employee.resume.delete(save=False)
-                employee.resume = None
-
-        # Check if a *new* resume was uploaded
         new_resume = request.FILES.get('resume')
         if new_resume:
             if employee.resume:
                 employee.resume.delete(save=False)
             employee.resume = new_resume
 
-        # --- 5. Save all changes to the database ---
-        employee.save()
-        
-        # Redirect back to the employee list page
-        return redirect('employee_list') # Make sure 'employee_list' is the name of your URL
+        # --- 5. Save and Redirect ---
+        try:
+            employee.save()
+            messages.success(request, f'Profile for {employee.name} updated successfully.')
+            return redirect('employee_list')
+        except IntegrityError:
+            messages.error(request, 'Update failed: This contact number is already assigned to another employee.')
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
 
-    # --- This runs if it's a GET request (just loading the page) ---
-    context = {
-        'employee': employee
-    }
-    return render(request, 'edit_employee.html', context)
+    return render(request, 'edit_employee.html', {'employee': employee})
 
 @login_required(login_url='login')
 def export_to_excel(request):
