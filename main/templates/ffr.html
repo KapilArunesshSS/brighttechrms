@@ -32,17 +32,19 @@
         .dot-green { background: var(--success); box-shadow: 0 0 5px var(--success); }
         .dot-red { background: var(--danger); box-shadow: 0 0 5px var(--danger); }
 
-        /* CHANGED: grid-template-columns changed to 5 to fit OT Man Days */
         .stats-banner { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; background: #eef2f3; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 6px solid var(--accent); }
         .stat-item { display: flex; flex-direction: column; }
         .stat-label { font-size: 0.75rem; color: #7f8c8d; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
         .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); margin-top: 5px; }
 
-        .controls { display: flex; gap: 25px; background: #fdfdfd; padding: 20px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 25px; align-items: flex-end; }
+        .controls { display: flex; gap: 20px; background: #fdfdfd; padding: 20px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 25px; align-items: flex-end; flex-wrap: wrap; }
         .control-group { display: flex; flex-direction: column; gap: 8px; }
-        label { font-weight: 700; font-size: 0.9rem; color: #444; }
-        select, input[type="date"] { padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 1rem; outline: none; transition: border-color 0.2s; }
+        label { font-weight: 700; font-size: 0.85rem; color: #444; }
+        select, input[type="date"] { padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
         select:focus, input:focus { border-color: var(--accent); }
+        
+        /* Style for read-only date */
+        input[readonly] { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; border-color: #e2e8f0; }
 
         .table-container { max-height: 500px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; min-width: 1500px; }
@@ -59,7 +61,6 @@
         .ffr-cell { font-weight: 800; color: var(--accent); }
         .abs-pct-cell { font-weight: 800; color: var(--danger); }
         
-        /* Fixed alignement to flex-end after removing the reset button */
         .action-bar { margin-top: 25px; display: flex; justify-content: flex-end; align-items: center; padding-top: 20px; border-top: 2px solid #eee; }
         .btn-group { display: flex; gap: 15px; align-items: center; }
         .btn { border: none; padding: 12px 28px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: all 0.3s; font-size: 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
@@ -98,28 +99,33 @@
     {% endif %}
 
     <!-- Site Status Indicators -->
-    <div class="site-status-panel" id="site-indicators">
-        <!-- Site Cards injected by JS -->
-    </div>
+    <div class="site-status-panel" id="site-indicators"></div>
 
     <div class="stats-banner">
         <div class="stat-item"><span class="stat-label">Active Site</span><span class="stat-value">{{ selected_site|default:"ALL" }}</span></div>
         <div class="stat-item"><span class="stat-label">Total Site Scope</span><span class="stat-value" id="disp-scope">0</span></div>
         <div class="stat-item"><span class="stat-label">Avg. Site FFR %</span><span class="stat-value" id="disp-avg-ffr" style="color: var(--success);">0.00%</span></div>
         <div class="stat-item"><span class="stat-label">Avg. Absent %</span><span class="stat-value" id="disp-avg-abs" style="color: var(--danger);">0.00%</span></div>
-        <!-- ADDED: OT Man Days Output -->
         <div class="stat-item"><span class="stat-label">OT Man Days</span><span class="stat-value" id="disp-ot-mandays" style="color: var(--warning);">0.00</span></div>
     </div>
 
+    <!-- Controls Section -->
     <form method="GET" action="{% url 'FFR' %}" id="filterForm" class="controls">
+        <!-- Current Date Input -->
         <div class="control-group">
-            <label>Report Date</label>
+            <label>Current Date (Today)</label>
+            <input type="date" id="current_date" value="{{ current_date }}" readonly>
+        </div>
+
+        <!-- Report Date Input (Today Button Removed) -->
+        <div class="control-group">
+            <label>Report Date (Data Entry)</label>
             <input type="date" name="report_date" id="report_date" value="{{ report_date }}" onchange="this.form.submit()">
         </div>
+
         <div class="control-group">
             <label>Site Selection</label>
             <select name="site_selection" id="site_filter" onchange="this.form.submit()">
-                
                 {% if is_superuser %}
                     <option value="ALL" {% if selected_site == 'ALL' %}selected{% endif %}>All Sites (Global)</option>
                     <option value="BMM" {% if selected_site == 'BMM' %}selected{% endif %}>BMM</option>
@@ -135,7 +141,6 @@
                         <option value="" disabled selected>Unauthorized</option>
                     {% endif %}
                 {% endif %}
-                
             </select>
         </div>
     </form>
@@ -164,14 +169,11 @@
                         <th>Remarks</th>
                     </tr>
                 </thead>
-                <tbody id="table-body">
-                    <!-- Dynamic Rows -->
-                </tbody>
+                <tbody id="table-body"></tbody>
             </table>
         </div>
 
         <div class="action-bar">
-            <!-- Reset Database Ledger button removed -->
             <div class="btn-group">
                 <button type="submit" name="save_data" class="btn btn-save" {% if selected_site == "ALL" %}disabled title="Switch to a specific site to save records."{% endif %}>Save Site Record</button>
             </div>
@@ -183,7 +185,6 @@
     const sitesList = ["BMM", "JAIRAJ", "MSSSL", "Arjas", "SLR", "AGNI"];
     
     const masterData = [
-        // BMM SITE (1-34)
         {sr:1, site:"BMM", dept:"Rolling Mill", desig:"Mill Tech", skill:"HSK", scope:12},
         {sr:2, site:"BMM", dept:"Rolling Mill", desig:"Cold Shear Operator", skill:"HSK", scope:7},
         {sr:3, site:"BMM", dept:"Rolling Mill", desig:"Mill Tech", skill:"SK", scope:9},
@@ -219,8 +220,6 @@
         {sr:33, site:"BMM", dept:"CNC Supply", desig:"CNC Notching", skill:"HSK", scope:10},
         {sr:34, site:"BMM", dept:"CNC Supply", desig:"CNC Branding", skill:"HSK", scope:4},
         {sr:35, site:"BMM", dept:"Rolling Mill", desig:"RHF Operator", skill:"HSk", scope:5},
-
-        // JAIRAJ (36-60)
         {sr:36, site:"JAIRAJ", dept:"Rolling Mill", desig:"Shift Technicians - Electrician", skill:"SK", scope:5},
         {sr:37, site:"JAIRAJ", dept:"Rolling Mill", desig:"PULPIT Operator", skill:"SK", scope:3},
         {sr:38, site:"JAIRAJ", dept:"Rolling Mill", desig:"SHIFT Technicians / Fitters", skill:"SK", scope:9},
@@ -246,8 +245,6 @@
         {sr:58, site:"JAIRAJ", dept:"UTILITY", desig:"Electricians - Cranes, Compressors, Pumphouse", skill:"SK", scope:2},
         {sr:59, site:"JAIRAJ", dept:"UTILITY", desig:"Technician (Pump Maintenance)", skill:"SK", scope:2},
         {sr:60, site:"JAIRAJ", dept:"UTILITY", desig:"Technician (Crane Maintenance)", skill:"SK", scope:2},
-
-        // MSSSL (61-84)
         {sr:61, site:"MSSSL", dept:"BBU", desig:"Bar to Bar (Drawing)", skill:"HSK", scope:5},
         {sr:62, site:"MSSSL", dept:"BBU", desig:"Bar to Bar Peeling + Reeling Operator", skill:"HSK", scope:7},
         {sr:63, site:"MSSSL", dept:"BBU", desig:"Centreless Grinder Operator", skill:"HSK", scope:27},
@@ -272,19 +269,14 @@
         {sr:82, site:"MSSSL", dept:"HT", desig:"STC Furnace", skill:"HSK", scope:11},
         {sr:83, site:"MSSSL", dept:"HT", desig:"Bar hardening & Tempering Furnace", skill:"HSK", scope:1},
         {sr:84, site:"MSSSL", dept:"BBU", desig:"Helpers Assistant", skill:"USK", scope:10},
-
-        // ARJAS (85-107)
         {sr:85, site:"Arjas", dept:"Rolling Mill", desig:"Welder cum gas cutter", skill:"SK", scope:3},
         {sr:86, site:"Arjas", dept:"Rolling Mill", desig:"Bar Aligner", skill:"SSK", scope:3},
         {sr:87, site:"Arjas", dept:"Rolling Mill", desig:"Bundling M/c Operator", skill:"SSK", scope:6},
         {sr:88, site:"Arjas", dept:"Rolling Mill", desig:"Sling Man", skill:"SSK", scope:3},
         {sr:89, site:"Arjas", dept:"Rolling Mill", desig:"Tag Printer", skill:"SSK", scope:3},
         {sr:90, site:"Arjas", dept:"INS- SUPPLY", desig:"Sling Man", skill:"SSK", scope:6},
-        
-        // FIX: Kept these renamed so they don't overwrite each other in the database!
         {sr:91, site:"Arjas", dept:"INS- SUPPLY", desig:"Helper (A)", skill:"SSK", scope:6},
         {sr:92, site:"Arjas", dept:"INS- SUPPLY", desig:"Helper (B)", skill:"SSK", scope:3},
-        
         {sr:93, site:"Arjas", dept:"INS- SUPPLY", desig:"Operator", skill:"HSK", scope:6},
         {sr:94, site:"Arjas", dept:"INS- SUPPLY", desig:"Grinder", skill:"SSK", scope:12},
         {sr:95, site:"Arjas", dept:"INS- SUPPLY", desig:"Crane Operator", skill:"HSK", scope:1},
@@ -300,8 +292,6 @@
         {sr:105, site:"Arjas", dept:"Heat Treatment", desig:"Grinder", skill:"SSK", scope:2},
         {sr:106, site:"Arjas", dept:"Heat Treatment", desig:"Helper", skill:"USK", scope:4},
         {sr:107, site:"Arjas", dept:"Packaging", desig:"Helper", skill:"USK", scope:3},
-
-        // SLR (108-115)
         {sr:108, site:"SLR", dept:"Rolling Mill", desig:"Mill Fitter", skill:"HSK", scope:9},
         {sr:109, site:"SLR", dept:"Rolling Mill", desig:"Roill Shop Fitter", skill:"HSK", scope:6},
         {sr:110, site:"SLR", dept:"Rolling Mill", desig:"Guide Fitter", skill:"HSK", scope:2},
@@ -310,8 +300,6 @@
         {sr:113, site:"SLR", dept:"Rolling Mill", desig:"B H Operator", skill:"SSK", scope:30},
         {sr:114, site:"SLR", dept:"Rolling Mill", desig:"Mill Assistant Fitter", skill:"SSK", scope:3},
         {sr:115, site:"SLR", dept:"Rolling Mill", desig:"Office Boy", skill:"USK", scope:1},
-
-        // AGNI (116-162)
         {sr:116, site:"AGNI", dept:"Furnace", desig:"Melter", skill:"HSK", scope:6},
         {sr:117, site:"AGNI", dept:"CCM", desig:"Shift Incharge", skill:"HSK", scope:5},
         {sr:118, site:"AGNI", dept:"CCM", desig:"Mould Operator", skill:"SK", scope:12},
@@ -330,7 +318,7 @@
         {sr:131, site:"AGNI", dept:"MECHANICAL DEPT", desig:"Jr Mechanical Fitter", skill:"SK", scope:13},
         {sr:132, site:"AGNI", dept:"LAB TECHNICIAN", desig:"Lab Chemist", skill:"HSK", scope:7},
         {sr:133, site:"AGNI", dept:"CCM- Helpers", desig:"Mould Operator - Helper", skill:"USK", scope:4},
-        {sr:134, site:"AGNI", dept:"CCM- Helpers", desig:"Ladle Man - Helper", skill:"USK", scope:7},
+        {sr:134, site:"AGNI", dept:"CCM- Helpers", desig:"Laddle Man - Helper", skill:"USK", scope:7},
         {sr:135, site:"AGNI", dept:"CCM- Helpers", desig:"Ladle Mason - Helper", skill:"USK", scope:2},
         {sr:136, site:"AGNI", dept:"CCM- Helpers", desig:"Tundish Mason - Helper", skill:"USK", scope:4},
         {sr:137, site:"AGNI", dept:"CCM- Helpers", desig:"Billet Yard - Helper", skill:"USK", scope:4},
@@ -361,7 +349,6 @@
         {sr:162, site:"AGNI", dept:"STAFF - SUPPLY", desig:"ADMIN", skill:"HSK", scope:1}
     ];
 
-    // MISSING LINE 1 FIX: Adding 'skill' to the database entries so JS knows what skill it is
     const dbEntries = [
         {% for e in all_entries|default:entries %}
         {
@@ -427,8 +414,6 @@
         currentProfiles = (site === "ALL") ? masterData : masterData.filter(d => d.site === site);
 
         currentProfiles.forEach((p) => {
-            
-            // MISSING LINE 2 FIX: Adding '&& d.skill === p.skill' so it ignores old duplicate errors
             const db = dbEntries.find(d => 
                 d.site === p.site && d.dept === p.dept && d.desig === p.desig && d.skill === p.skill
             );

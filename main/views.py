@@ -11,7 +11,7 @@ from django.contrib.auth import authenticate , login as login_django , logout as
 from django.contrib.auth.decorators import login_required
 from .models import Employee , ManpowerEntry
 from django.db.models import Count
-from datetime import datetime , date
+from datetime import datetime , date, timedelta
 import json
 
 # allowing super user 
@@ -38,58 +38,68 @@ EMAIL_SITE_MAP = {
 }
 @login_required(login_url='login')
 def FFR(request):
+    """
+    Handles the FFR Manpower Ledger logic.
+    - Current Date: Set to Today.
+    - Report Date: Defaults to 1 day before Today (Yesterday).
+    - Access Control: Restricts site access based on user email unless superuser.
+    """
     user = request.user
-    # Get user email safely (check email first, fallback to username, make lowercase)
     user_email = (user.email or user.username or "").lower().strip()
     is_superuser = user.is_superuser
 
-    # FIX: Read parameters from POST if submitting, otherwise GET
+    # --- 1. Date Calculation Logic ---
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    
+    # Check both POST and GET for parameters
     if request.method == 'POST':
         requested_site = request.POST.get('site_selection', 'ALL')
-        report_date = request.POST.get('report_date', str(date.today()))
+        report_date = request.POST.get('report_date')
     else:
         requested_site = request.GET.get('site_selection', 'ALL')
-        report_date = request.GET.get('report_date', str(date.today()))
+        report_date = request.GET.get('report_date')
+
+    # Default to Yesterday if no date is provided
+    if not report_date:
+        report_date = str(yesterday)
     
-    # ------------------------------------------
-    # ACCESS CONTROL LOGIC
-    # ------------------------------------------
+    # --- 2. Site Authorization Logic ---
     if is_superuser:
         selected_site = requested_site
     else:
-        # Force the site based on their email mapping
+        # Normal users are restricted to their mapped site
         selected_site = EMAIL_SITE_MAP.get(user_email, "NONE")
 
-    # ==========================================
-    # 1. HANDLE POST REQUEST (SAVING DATA)
-    # ==========================================
+    # --- 3. Handle Data Submission (POST) ---
     if request.method == 'POST':
-        
-        # Find all keys that start with 'p_' (Present count). 
+        # Collect all 'present' keys to identify which rows were submitted
         present_keys = [k for k in request.POST.keys() if k.startswith('p_')]
         
         for p_key in present_keys:
-            sr = p_key.split('_')[1] 
+            sr = p_key.split('_')[1] # Extract the serial number index
             
-            # Fetch row data
+            # Identify the site for this specific row in the form
             row_site = request.POST.get(f'site_{sr}')
             
-            # SECURITY CHECK: Prevent users from manipulating HTML to save to other sites
+            # Validation: Non-superusers cannot save data for sites they don't own
             if not is_superuser and row_site != selected_site:
-                continue # Skip this row completely
+                continue 
             
+            # Gather row details
             dept = request.POST.get(f'dept_{sr}')
             desig = request.POST.get(f'desig_{sr}')
             skill = request.POST.get(f'skill_{sr}')
             scope = request.POST.get(f'scope_{sr}', 0)
             
+            # Gather variable inputs
             p = request.POST.get(f'p_{sr}', 0)
             a = request.POST.get(f'a_{sr}', 0)
             w = request.POST.get(f'w_{sr}', 0)
             o = request.POST.get(f'o_{sr}', 0)
             rem = request.POST.get(f'rem_{sr}', '')
 
-            defaults_dict = {
+            data_defaults = {
                 'scope': int(scope) if scope else 0,
                 'present': int(p) if p else 0,
                 'absent': int(a) if a else 0,
@@ -99,57 +109,47 @@ def FFR(request):
             }
 
             try:
-                # CRITICAL FIX: 'skill_level=skill' MUST be in the lookup query, 
-                # otherwise rows with the same designation but different skills overwrite each other!
+                # Update existing record or create a new one for this specific day/site/role/skill
                 ManpowerEntry.objects.update_or_create(
                     date=report_date,
                     site=row_site,
                     department=dept,
                     designation=desig,
-                    skill_level=skill,  # <-- ADDED HERE
-                    defaults=defaults_dict
+                    skill_level=skill,
+                    defaults=data_defaults
                 )
             except ManpowerEntry.MultipleObjectsReturned:
-                # Clean up duplicate glitches from previous bugs
+                # Fallback: Clean up accidental duplicates from the database
                 duplicates = ManpowerEntry.objects.filter(
-                    date=report_date,
-                    site=row_site,
-                    department=dept,
-                    designation=desig,
-                    skill_level=skill
+                    date=report_date, site=row_site, department=dept, designation=desig, skill_level=skill
                 )
-                
-                first_record = duplicates.first()
-                duplicates.exclude(pk=first_record.pk).delete()
-                
-                for key, value in defaults_dict.items():
-                    setattr(first_record, key, value)
-                first_record.save()
+                keep = duplicates.first()
+                duplicates.exclude(pk=keep.pk).delete()
+                for key, val in data_defaults.items():
+                    setattr(keep, key, val)
+                keep.save()
         
-        messages.success(request, f"Records for {selected_site} on {report_date} saved successfully!")
+        messages.success(request, f"Daily records for {selected_site} on {report_date} have been saved.")
         return redirect(f'/FFR/?report_date={report_date}&site_selection={selected_site}')
 
-    # ==========================================
-    # 2. HANDLE GET REQUEST (DISPLAYING DATA)
-    # ==========================================
-    all_entries = ManpowerEntry.objects.filter(date=report_date)
+    # --- 4. Handle Data Retrieval (GET) ---
+    all_day_entries = ManpowerEntry.objects.filter(date=report_date)
 
-    # Filter the records specifically for the table based on authorized site
     if selected_site != 'ALL' and selected_site != 'NONE':
-        entries = all_entries.filter(site=selected_site)
+        entries = all_day_entries.filter(site=selected_site)
     else:
-        entries = all_entries
+        entries = all_day_entries
 
     context = {
         'selected_site': selected_site,
-        'report_date': report_date,
-        'entries': entries,          
-        'all_entries': all_entries,  
+        'report_date': report_date,      
+        'current_date': str(today),      
+        'entries': entries,              
+        'all_entries': all_day_entries,  
         'is_superuser': is_superuser,
         'user_email': user_email, 
     }
-    return render(request, 'ffr.html', context)
-
+    
     return render(request, 'ffr.html', context)
 @login_required(login_url='login')
 def export_ffr_all(request):
@@ -274,78 +274,72 @@ def add_employee(request):
     return render(request, 'add_employee.html')
 @login_required(login_url='login')
 def edit_employee(request, employee_id):
-    """
-    Handles updating an existing employee profile.
-    Safely handles fields that might be disabled in the HTML for certain users.
-    """
+    # Get the specific employee object we want to edit
     employee = get_object_or_404(Employee, id=employee_id)
 
+    # --- This block runs when the user submits the "Update Profile" form ---
     if request.method == 'POST':
-        # --- 1. Safely update text fields ---
-        # Logic: Only update the model field if the key exists in POST.
-        # This prevents setting fields to NULL when they are disabled in the HTML.
         
-        fields_to_update = {
-            'name': 'name',
-            'age': 'age',
-            'contact': 'contact_number', # Mapping HTML 'contact' to Model 'contact_number'
-            'company': 'company',
-            'role': 'role',
-            'status': 'status',
-            'remarks': 'remarks'
-        }
+        # 1. Update all the text-based fields from the form
+        employee.name = request.POST.get('name')
+        employee.age = request.POST.get('age')
+        employee.contact_number = request.POST.get('contact')
+        employee.company = request.POST.get('company')
+        employee.role = request.POST.get('role')
+        employee.status = request.POST.get('status')
+        employee.remarks = request.POST.get('remarks')
 
-        for post_key, model_attr in fields_to_update.items():
-            value = request.POST.get(post_key)
-            if value is not None: # Field was present in submission (not disabled)
-                setattr(employee, model_attr, value)
-
-        # --- 2. Conditional Logic for Business Rules ---
-        
-        # Clear remarks if status is no longer rejected
+        # 2. Clean up conditional fields
+        # If status is not 'rejected', clear any old remarks
         if employee.status != 'rejected':
-            employee.remarks = None
+            employee.remarks = None # or '', depending on your model
         
-        # Clear offer letter if status is no longer offered
+        # If status is not 'offered', clear any old offer letter
         if employee.status != 'offered' and employee.offer_letter:
             employee.offer_letter.delete(save=False)
             employee.offer_letter = None
 
-        # --- 3. Handle File Deletions (Checkboxes) ---
+        # --- 3. Handle the Offer Letter File ---
         
-        if request.POST.get('delete_offer_letter') and employee.offer_letter:
-            employee.offer_letter.delete(save=False)
-            employee.offer_letter = None
+        # Check if the "delete_offer_letter" checkbox was ticked
+        if request.POST.get('delete_offer_letter'):
+            if employee.offer_letter:
+                employee.offer_letter.delete(save=False) # Delete file from storage
+                employee.offer_letter = None # Clear the field in the database
 
-        if request.POST.get('delete_resume') and employee.resume:
-            employee.resume.delete(save=False)
-            employee.resume = None
-
-        # --- 4. Handle New File Uploads ---
-        
+        # Check if a *new* offer letter was uploaded
         new_offer_letter = request.FILES.get('offer_letter')
         if new_offer_letter:
             if employee.offer_letter:
-                employee.offer_letter.delete(save=False)
-            employee.offer_letter = new_offer_letter
+                employee.offer_letter.delete(save=False) # Delete the old one first
+            employee.offer_letter = new_offer_letter # Save the new one
 
+        # --- 4. Handle the Resume File ---
+        
+        # Check if the "delete_resume" checkbox was ticked
+        if request.POST.get('delete_resume'):
+            if employee.resume:
+                employee.resume.delete(save=False)
+                employee.resume = None
+
+        # Check if a *new* resume was uploaded
         new_resume = request.FILES.get('resume')
         if new_resume:
             if employee.resume:
                 employee.resume.delete(save=False)
             employee.resume = new_resume
 
-        # --- 5. Save and Redirect ---
-        try:
-            employee.save()
-            messages.success(request, f'Profile for {employee.name} updated successfully.')
-            return redirect('employee_list')
-        except IntegrityError:
-            messages.error(request, 'Update failed: This contact number is already assigned to another employee.')
-        except Exception as e:
-            messages.error(request, f'An error occurred: {str(e)}')
+        # --- 5. Save all changes to the database ---
+        employee.save()
+        
+        # Redirect back to the employee list page
+        return redirect('employee_list') # Make sure 'employee_list' is the name of your URL
 
-    return render(request, 'edit_employee.html', {'employee': employee})
+    # --- This runs if it's a GET request (just loading the page) ---
+    context = {
+        'employee': employee
+    }
+    return render(request, 'edit_employee.html', context)
 
 @login_required(login_url='login')
 def export_to_excel(request):
