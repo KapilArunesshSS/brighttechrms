@@ -98,6 +98,8 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
+
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 2500
 # --- AWS S3 & MEDIA CONFIGURATION ---
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 
