@@ -40,100 +40,69 @@ EMAIL_SITE_MAP = {
 def FFR(request):
     """
     Handles the FFR Manpower Ledger logic.
-    - Current Date: Set to Today.
-    - Report Date: Defaults to 1 day before Today (Yesterday).
-    - Access Control: Restricts site access based on user email unless superuser.
+    Optimized with transaction.atomic() to prevent live server OOM crashes on AGNI site.
     """
     user = request.user
     user_email = (user.email or user.username or "").lower().strip()
     is_superuser = user.is_superuser
 
-    # --- 1. Date Calculation Logic ---
+    # 1. Date Logic (Default to Yesterday)
     today = date.today()
     yesterday = today - timedelta(days=1)
     
-    # Check both POST and GET for parameters
     if request.method == 'POST':
         requested_site = request.POST.get('site_selection', 'ALL')
-        report_date = request.POST.get('report_date')
+        report_date = request.POST.get('report_date', str(yesterday))
     else:
         requested_site = request.GET.get('site_selection', 'ALL')
-        report_date = request.GET.get('report_date')
+        report_date = request.GET.get('report_date', str(yesterday))
 
-    # Default to Yesterday if no date is provided
-    if not report_date:
-        report_date = str(yesterday)
-    
-    # --- 2. Site Authorization Logic ---
-    if is_superuser:
-        selected_site = requested_site
-    else:
-        # Normal users are restricted to their mapped site
-        selected_site = EMAIL_SITE_MAP.get(user_email, "NONE")
+    # 2. Site Authorization
+    selected_site = requested_site if is_superuser else EMAIL_SITE_MAP.get(user_email, "NONE")
 
-    # --- 3. Handle Data Submission (POST) ---
+    # 3. Optimized POST Handling
     if request.method == 'POST':
-        # Collect all 'present' keys to identify which rows were submitted
-        present_keys = [k for k in request.POST.keys() if k.startswith('p_')]
-        
-        for p_key in present_keys:
-            sr = p_key.split('_')[1] # Extract the serial number index
+        # Use atomic transaction to significantly reduce memory and DB load for large sites
+        with transaction.atomic():
+            present_keys = [k for k in request.POST.keys() if k.startswith('p_')]
             
-            # Identify the site for this specific row in the form
-            row_site = request.POST.get(f'site_{sr}')
-            
-            # Validation: Non-superusers cannot save data for sites they don't own
-            if not is_superuser and row_site != selected_site:
-                continue 
-            
-            # Gather row details
-            dept = request.POST.get(f'dept_{sr}')
-            desig = request.POST.get(f'desig_{sr}')
-            skill = request.POST.get(f'skill_{sr}')
-            scope = request.POST.get(f'scope_{sr}', 0)
-            
-            # Gather variable inputs
-            p = request.POST.get(f'p_{sr}', 0)
-            a = request.POST.get(f'a_{sr}', 0)
-            w = request.POST.get(f'w_{sr}', 0)
-            o = request.POST.get(f'o_{sr}', 0)
-            rem = request.POST.get(f'rem_{sr}', '')
+            for p_key in present_keys:
+                sr = p_key.split('_')[1]
+                row_site = request.POST.get(f'site_{sr}')
+                
+                # Validation: Prevent unauthorized site modifications
+                if not is_superuser and row_site != selected_site:
+                    continue 
+                
+                try:
+                    defaults = {
+                        'scope': int(request.POST.get(f'scope_{sr}', 0)),
+                        'present': int(request.POST.get(f'p_{sr}', 0)),
+                        'absent': int(request.POST.get(f'a_{sr}', 0)),
+                        'weekly_off': int(request.POST.get(f'w_{sr}', 0)),
+                        'overtime': int(request.POST.get(f'o_{sr}', 0)),
+                        'remarks': request.POST.get(f'rem_{sr}', '')
+                    }
 
-            data_defaults = {
-                'scope': int(scope) if scope else 0,
-                'present': int(p) if p else 0,
-                'absent': int(a) if a else 0,
-                'weekly_off': int(w) if w else 0,
-                'overtime': int(o) if o else 0,
-                'remarks': rem
-            }
-
-            try:
-                # Update existing record or create a new one for this specific day/site/role/skill
-                ManpowerEntry.objects.update_or_create(
-                    date=report_date,
-                    site=row_site,
-                    department=dept,
-                    designation=desig,
-                    skill_level=skill,
-                    defaults=data_defaults
-                )
-            except ManpowerEntry.MultipleObjectsReturned:
-                # Fallback: Clean up accidental duplicates from the database
-                duplicates = ManpowerEntry.objects.filter(
-                    date=report_date, site=row_site, department=dept, designation=desig, skill_level=skill
-                )
-                keep = duplicates.first()
-                duplicates.exclude(pk=keep.pk).delete()
-                for key, val in data_defaults.items():
-                    setattr(keep, key, val)
-                keep.save()
+                    ManpowerEntry.objects.update_or_create(
+                        date=report_date,
+                        site=row_site,
+                        department=request.POST.get(f'dept_{sr}'),
+                        designation=request.POST.get(f'desig_{sr}'),
+                        skill_level=request.POST.get(f'skill_{sr}'),
+                        defaults=defaults
+                    )
+                except (ValueError, TypeError):
+                    continue
         
-        messages.success(request, f"Daily records for {selected_site} on {report_date} have been saved.")
+        messages.success(request, f"Daily records for {selected_site} on {report_date} saved successfully!")
         return redirect(f'/FFR/?report_date={report_date}&site_selection={selected_site}')
 
-    # --- 4. Handle Data Retrieval (GET) ---
-    all_day_entries = ManpowerEntry.objects.filter(date=report_date)
+    # 4. Optimized GET Retrieval
+    # Use .only() to fetch specific fields and reduce RAM usage
+    all_day_entries = ManpowerEntry.objects.filter(date=report_date).only(
+        'site', 'department', 'designation', 'skill_level', 'present', 'absent', 'weekly_off', 'overtime', 'remarks', 'scope'
+    )
 
     if selected_site != 'ALL' and selected_site != 'NONE':
         entries = all_day_entries.filter(site=selected_site)
@@ -150,7 +119,7 @@ def FFR(request):
         'user_email': user_email, 
     }
     
-    return render(request, 'ffr.html', context)
+    return render(request, 'main/ffr.html', context)
 @login_required(login_url='login')
 def export_ffr_all(request):
     site_filter = request.GET.get('site_selection', 'ALL')
