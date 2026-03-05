@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FFR Manpower Management System</title>
+    <title>FFR Manpower Management System | RMS</title>
     <!-- Include SheetJS for Client-Side Validation and logic -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -43,7 +43,6 @@
         select, input[type="date"] { padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
         select:focus, input:focus { border-color: var(--accent); }
         
-        /* Style for read-only date */
         input[readonly] { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; border-color: #e2e8f0; }
 
         .table-container { max-height: 500px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 20px; }
@@ -62,7 +61,6 @@
         .abs-pct-cell { font-weight: 800; color: var(--danger); }
         
         .action-bar { margin-top: 25px; display: flex; justify-content: flex-end; align-items: center; padding-top: 20px; border-top: 2px solid #eee; }
-        .btn-group { display: flex; gap: 15px; align-items: center; }
         .btn { border: none; padding: 12px 28px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: all 0.3s; font-size: 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
         .btn-download-all { background: var(--warning); color: white; }
         .btn-save { background: var(--success); color: white; box-shadow: 0 4px 10px rgba(39, 174, 96, 0.2); }
@@ -77,14 +75,13 @@
         .alert { padding: 15px 20px; margin-bottom: 25px; border-radius: 8px; font-weight: 600; border: 1px solid transparent; }
         .alert-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
     </style>
-    <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
 </head>
 <body>
 
 <div class="container">
     <header>
         <div style="display: flex; align-items: center; gap: 20px;">
-            <a href="{% url 'employee_list' %}" class="btn" style="background: var(--muted); color: white; padding: 8px 15px;">&larr; Dashboard</a>
+            <a href="/" class="btn" style="background: var(--muted); color: white; padding: 8px 15px;">&larr; Dashboard</a>
             <h1 style="margin:0; font-size: 1.6rem;">FFR Manpower Ledger</h1>
         </div>
         <div class="btn-group">
@@ -111,18 +108,14 @@
 
     <!-- Controls Section -->
     <form method="GET" action="{% url 'FFR' %}" id="filterForm" class="controls">
-        <!-- Current Date Input -->
         <div class="control-group">
             <label>Current Date (Today)</label>
             <input type="date" id="current_date" value="{{ current_date }}" readonly>
         </div>
-
-        <!-- Report Date Input (Today Button Removed) -->
         <div class="control-group">
             <label>Report Date (Data Entry)</label>
             <input type="date" name="report_date" id="report_date" value="{{ report_date }}" onchange="this.form.submit()">
         </div>
-
         <div class="control-group">
             <label>Site Selection</label>
             <select name="site_selection" id="site_filter" onchange="this.form.submit()">
@@ -133,7 +126,8 @@
                     <option value="MSSSL" {% if selected_site == 'MSSSL' %}selected{% endif %}>MSSSL</option>
                     <option value="Arjas" {% if selected_site == 'Arjas' %}selected{% endif %}>Arjas</option>
                     <option value="SLR" {% if selected_site == 'SLR' %}selected{% endif %}>SLR</option>
-                    <option value="AGNI" {% if selected_site == 'AGNI' %}selected{% endif %}>AGNI</option>
+                    <option value="AGNI-CCM" {% if selected_site == 'AGNI' %}selected{% endif %}>AGNI-CCM</option>
+                    <option value="AGNI-IF" {% if selected_site == 'AGNI-IF' %}selected{% endif %}>AGNI-IF</option>
                 {% else %}
                     {% if selected_site != "NONE" %}
                         <option value="{{ selected_site }}" selected>{{ selected_site }}</option>
@@ -174,14 +168,13 @@
         </div>
 
         <div class="action-bar">
-            <div class="btn-group">
-                <button type="submit" name="save_data" class="btn btn-save" {% if selected_site == "ALL" %}disabled title="Switch to a specific site to save records."{% endif %}>Save Site Record</button>
-            </div>
+            <button type="submit" name="save_data" class="btn btn-save" {% if selected_site == "ALL" %}disabled title="Switch to a specific site to save records."{% endif %}>Save Site Record</button>
         </div>
     </form>
 </div>
 
 <script>
+    // sitesList only contains unique physical sites for indicator generation
     const sitesList = ["BMM", "JAIRAJ", "MSSSL", "Arjas", "SLR", "AGNI"];
     
     const masterData = [
@@ -303,53 +296,54 @@
         {sr:114, site:"SLR", dept:"Rolling Mill", desig:"Mill Assistant Fitter", skill:"SSK", scope:3},
         {sr:115, site:"SLR", dept:"Rolling Mill", desig:"Office Boy", skill:"USK", scope:1},
 
-        {sr:116, site:"AGNI", dept:"ADMIN -2", desig:"Site Incharge / Recruitter", skill:"HSK", scope:1},
-        {sr:117, site:"AGNI", dept:"ADMIN -2", desig:"Admin / Time Office", skill:"SK", scope:1},
-        {sr:118, site:"AGNI", dept:"FURNACE", desig:"Melter", skill:"HSK", scope:8},
-        {sr:119, site:"AGNI", dept:"CCM", desig:"Shift Incharge", skill:"HSK", scope:4},
-        {sr:120, site:"AGNI", dept:"CCM", desig:"Mould Operator", skill:"SK", scope:13},
-        {sr:121, site:"AGNI", dept:"CCM", desig:"Gas Cutter", skill:"SK", scope:16},
-        {sr:122, site:"AGNI", dept:"CCM", desig:"SBO + Fitter", skill:"SSK", scope:6},
-        {sr:123, site:"AGNI", dept:"CCM", desig:"Teemer Man", skill:"SK", scope:6},
-        {sr:124, site:"AGNI", dept:"CCM", desig:"Laddle Man", skill:"SK", scope:8},
-        {sr:125, site:"AGNI", dept:"LADLE PREPERATION AREA", desig:"Ladle Mason", skill:"SSK", scope:4},
-        {sr:126, site:"AGNI", dept:"TUNDISH PREPERATION AREA", desig:"Tundish Mason", skill:"SSK", scope:3},
-        {sr:127, site:"AGNI", dept:"FORMER AREA", desig:"Forma Fitter", skill:"HSK", scope:1},
-        {sr:128, site:"AGNI", dept:"FORMER AREA", desig:"Forma Welder", skill:"SK", scope:2},
-        {sr:129, site:"AGNI", dept:"FORMER AREA", desig:"Forma Helper", skill:"USK", scope:2},
-        {sr:130, site:"AGNI", dept:"ELECTRICAL DEPT", desig:"Sr Electrician", skill:"HSK", scope:4},
-        {sr:131, site:"AGNI", dept:"ELECTRICAL DEPT", desig:"Jr Electrician", skill:"SK", scope:7},
-        {sr:132, site:"AGNI", dept:"MECHANICAL DEPT", desig:"Sr Mechanical Fitter", skill:"HSK", scope:13},
-        {sr:133, site:"AGNI", dept:"MECHANICAL DEPT", desig:"Jr Mechanical Fitter", skill:"SK", scope:13},
-        {sr:134, site:"AGNI", dept:"LAB TECHNICIAN", desig:"Lab Chemist", skill:"HSK", scope:7},
-        {sr:135, site:"AGNI", dept:"CCM -HELPERS", desig:"Mould Operator - Helper", skill:"USK", scope:4},
-        {sr:136, site:"AGNI", dept:"CCM -HELPERS", desig:"Ladle Man - Helper", skill:"USK", scope:6},
-        {sr:137, site:"AGNI", dept:"CCM -HELPERS", desig:"Ladle Mason- Helper", skill:"USK", scope:2},
-        {sr:138, site:"AGNI", dept:"CCM -HELPERS", desig:"Tundish Mason - Helper", skill:"USK", scope:4},
-        {sr:139, site:"AGNI", dept:"CCM -HELPERS", desig:"Billet Yard - Helper", skill:"USK", scope:4},
-        {sr:140, site:"AGNI", dept:"CCM -HELPERS", desig:"Lab Assistant - Helper", skill:"USK", scope:2},
-        {sr:141, site:"AGNI", dept:"CRANE OPERATOR", desig:"Billet Yard", skill:"HSK", scope:5},
-        {sr:142, site:"AGNI", dept:"CRANE OPERATOR", desig:"Shed -3", skill:"HSK", scope:6},
-        {sr:143, site:"AGNI", dept:"CRANE OPERATOR", desig:"Shed - 4, 7, 8, 9", skill:"HSK", scope:6},
-        {sr:144, site:"AGNI", dept:"CRANE OPERATOR", desig:"Shed 7, 8, 9", skill:"HSK", scope:14},
-        {sr:145, site:"AGNI", dept:"INDUCTION FURNACE UNIT-II", desig:"Supervisor", skill:"HSK", scope:2},
-        {sr:146, site:"AGNI", dept:"INDUCTION FURNACE UNIT-II", desig:"First Hand", skill:"HSK", scope:2},
-        {sr:147, site:"AGNI", dept:"INDUCTION FURNACE UNIT-II", desig:"Bariman", skill:"SK", scope:13},
-        {sr:148, site:"AGNI", dept:"INDUCTION FURNACE UNIT-II", desig:"Helper", skill:"USK", scope:14},
-        {sr:149, site:"AGNI", dept:"INDUCTION FURNACE UNIT-II", desig:"Patching Bariman", skill:"SK", scope:6},
-        {sr:150, site:"AGNI", dept:"INDUCTION FURNACE UNIT-II", desig:"Patching Helper", skill:"USK", scope:5},
-        {sr:151, site:"AGNI", dept:"INDUCTION FURNACE UNIT-III", desig:"Supervisor", skill:"HSK", scope:2},
-        {sr:152, site:"AGNI", dept:"INDUCTION FURNACE UNIT-III", desig:"First Hand", skill:"HSK", scope:2},
-        {sr:153, site:"AGNI", dept:"INDUCTION FURNACE UNIT-III", desig:"Bariman", skill:"SK", scope:13},
-        {sr:154, site:"AGNI", dept:"INDUCTION FURNACE UNIT-III", desig:"Helper", skill:"USK", scope:14},
-        {sr:155, site:"AGNI", dept:"INDUCTION FURNACE UNIT-III", desig:"Patching Bariman", skill:"SK", scope:6},
-        {sr:156, site:"AGNI", dept:"INDUCTION FURNACE UNIT-III", desig:"Patching Helper", skill:"USK", scope:5},
-        {sr:157, site:"AGNI", dept:"INDUCTION FURNACE UNIT-IV", desig:"Supervisor", skill:"HSK", scope:2},
-        {sr:158, site:"AGNI", dept:"INDUCTION FURNACE UNIT-IV", desig:"First Hand", skill:"HSK", scope:2},
-        {sr:159, site:"AGNI", dept:"INDUCTION FURNACE UNIT-IV", desig:"Bariman", skill:"SK", scope:13},
-        {sr:160, site:"AGNI", dept:"INDUCTION FURNACE UNIT-IV", desig:"Helper", skill:"USK", scope:14},
-        {sr:161, site:"AGNI", dept:"INDUCTION FURNACE UNIT-IV", desig:"Patching Bariman", skill:"SK", scope:5},
-        {sr:162, site:"AGNI", dept:"INDUCTION FURNACE UNIT-IV", desig:"Patching Helper", skill:"USK", scope:4}
+        {sr:116, site:"AGNI-CCM", dept:"ADMIN -2", desig:"Site Incharge / Recruitter", skill:"HSK", scope:1},
+        {sr:117, site:"AGNI-CCM", dept:"ADMIN -2", desig:"Admin / Time Office", skill:"SK", scope:1},
+        {sr:118, site:"AGNI-CCM", dept:"FURNACE", desig:"Melter", skill:"HSK", scope:8},
+        {sr:119, site:"AGNI-CCM", dept:"CCM", desig:"Shift Incharge", skill:"HSK", scope:4},
+        {sr:120, site:"AGNI-CCM", dept:"CCM", desig:"Mould Operator", skill:"SK", scope:13},
+        {sr:121, site:"AGNI-CCM", dept:"CCM", desig:"Gas Cutter", skill:"SK", scope:16},
+        {sr:122, site:"AGNI-CCM", dept:"CCM", desig:"SBO + Fitter", skill:"SSK", scope:6},
+        {sr:123, site:"AGNI-CCM", dept:"CCM", desig:"Teemer Man", skill:"SK", scope:6},
+        {sr:124, site:"AGNI-CCM", dept:"CCM", desig:"Laddle Man", skill:"SK", scope:8},
+        {sr:125, site:"AGNI-CCM", dept:"LADLE PREPERATION AREA", desig:"Ladle Mason", skill:"SSK", scope:4},
+        {sr:126, site:"AGNI-CCM", dept:"TUNDISH PREPERATION AREA", desig:"Tundish Mason", skill:"SSK", scope:3},
+        {sr:127, site:"AGNI-CCM", dept:"FORMER AREA", desig:"Forma Fitter", skill:"HSK", scope:1},
+        {sr:128, site:"AGNI-CCM", dept:"FORMER AREA", desig:"Forma Welder", skill:"SK", scope:2},
+        {sr:129, site:"AGNI-CCM", dept:"FORMER AREA", desig:"Forma Helper", skill:"USK", scope:2},
+        {sr:130, site:"AGNI-CCM", dept:"ELECTRICAL DEPT", desig:"Sr Electrician", skill:"HSK", scope:4},
+        {sr:131, site:"AGNI-CCM", dept:"ELECTRICAL DEPT", desig:"Jr Electrician", skill:"SK", scope:7},
+        {sr:132, site:"AGNI-CCM", dept:"MECHANICAL DEPT", desig:"Sr Mechanical Fitter", skill:"HSK", scope:13},
+        {sr:133, site:"AGNI-CCM", dept:"MECHANICAL DEPT", desig:"Jr Mechanical Fitter", skill:"SK", scope:13},
+        {sr:134, site:"AGNI-CCM", dept:"LAB TECHNICIAN", desig:"Lab Chemist", skill:"HSK", scope:7},
+        {sr:135, site:"AGNI-CCM", dept:"CCM -HELPERS", desig:"Mould Operator - Helper", skill:"USK", scope:4},
+        {sr:136, site:"AGNI-CCM", dept:"CCM -HELPERS", desig:"Ladle Man - Helper", skill:"USK", scope:6},
+        {sr:137, site:"AGNI-CCM", dept:"CCM -HELPERS", desig:"Ladle Mason- Helper", skill:"USK", scope:2},
+        {sr:138, site:"AGNI-CCM", dept:"CCM -HELPERS", desig:"Tundish Mason - Helper", skill:"USK", scope:4},
+        {sr:139, site:"AGNI-CCM", dept:"CCM -HELPERS", desig:"Billet Yard - Helper", skill:"USK", scope:4},
+        {sr:140, site:"AGNI-CCM", dept:"CCM -HELPERS", desig:"Lab Assistant - Helper", skill:"USK", scope:2},
+        {sr:141, site:"AGNI-CCM", dept:"CRANE OPERATOR", desig:"Billet Yard", skill:"HSK", scope:5},
+        {sr:142, site:"AGNI-CCM", dept:"CRANE OPERATOR", desig:"Shed -3", skill:"HSK", scope:6},
+        {sr:143, site:"AGNI-CCM", dept:"CRANE OPERATOR", desig:"Shed - 4, 7, 8, 9", skill:"HSK", scope:6},
+        {sr:144, site:"AGNI-CCM", dept:"CRANE OPERATOR", desig:"Shed 7, 8, 9", skill:"HSK", scope:14},
+
+        {sr:145, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-II", desig:"Supervisor", skill:"HSK", scope:2},
+        {sr:146, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-II", desig:"First Hand", skill:"HSK", scope:2},
+        {sr:147, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-II", desig:"Bariman", skill:"SK", scope:13},
+        {sr:148, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-II", desig:"Helper", skill:"USK", scope:14},
+        {sr:149, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-II", desig:"Patching Bariman", skill:"SK", scope:6},
+        {sr:150, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-II", desig:"Patching Helper", skill:"USK", scope:5},
+        {sr:151, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-III", desig:"Supervisor", skill:"HSK", scope:2},
+        {sr:152, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-III", desig:"First Hand", skill:"HSK", scope:2},
+        {sr:153, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-III", desig:"Bariman", skill:"SK", scope:13},
+        {sr:154, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-III", desig:"Helper", skill:"USK", scope:14},
+        {sr:155, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-III", desig:"Patching Bariman", skill:"SK", scope:6},
+        {sr:156, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-III", desig:"Patching Helper", skill:"USK", scope:5},
+        {sr:157, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-IV", desig:"Supervisor", skill:"HSK", scope:2},
+        {sr:158, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-IV", desig:"First Hand", skill:"HSK", scope:2},
+        {sr:159, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-IV", desig:"Bariman", skill:"SK", scope:13},
+        {sr:160, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-IV", desig:"Helper", skill:"USK", scope:14},
+        {sr:161, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-IV", desig:"Patching Bariman", skill:"SK", scope:5},
+        {sr:162, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-IV", desig:"Patching Helper", skill:"USK", scope:4}
      ];
 
     const dbEntries = [
@@ -371,16 +365,27 @@
         return `<span class="badge badge-${skill.toLowerCase()}">${skill}</span>`;
     }
 
+    /**
+     * Aggregated site indicators function.
+     * Combines AGNI and AGNI-IF data for a single display card.
+     */
     function initSiteIndicators() {
         const panel = document.getElementById('site-indicators');
         panel.innerHTML = '';
         
         sitesList.forEach(siteName => {
-            const hasData = dbEntries.some(e => e.site === siteName);
+            // Determine which internal site keys match this visual indicator
+            const isAgniGroup = (siteName === "AGNI");
+            const groupFilter = isAgniGroup ? ["AGNI-CCM", "AGNI-IF"] : [siteName];
+
+            // Check if any sub-site in the group has uploaded data
+            const hasData = dbEntries.some(e => groupFilter.includes(e.site));
+            
             let siteTotalScope = 0;
             let siteTotalPresent = 0;
             
-            const siteProfiles = masterData.filter(m => m.site === siteName);
+            // Calculate aggregated FFR from masterData and dbEntries
+            const siteProfiles = masterData.filter(m => groupFilter.includes(m.site));
             siteProfiles.forEach(sp => {
                 siteTotalScope += sp.scope;
                 const saved = dbEntries.find(d => 
@@ -447,15 +452,22 @@
         let ts = 0, tp = 0, ta = 0, tot = 0;
         
         currentProfiles.forEach(r => {
-            const pVal = parseInt(document.querySelector(`input[name="p_${r.sr}"]`).value) || 0;
-            const aVal = parseInt(document.querySelector(`input[name="a_${r.sr}"]`).value) || 0;
-            const oVal = parseFloat(document.querySelector(`input[name="o_${r.sr}"]`).value) || 0;
+            const pInput = document.querySelector(`input[name="p_${r.sr}"]`);
+            const aInput = document.querySelector(`input[name="a_${r.sr}"]`);
+            const oInput = document.querySelector(`input[name="o_${r.sr}"]`);
+            
+            const pVal = parseInt(pInput ? pInput.value : 0) || 0;
+            const aVal = parseInt(aInput ? aInput.value : 0) || 0;
+            const oVal = parseFloat(oInput ? oInput.value : 0) || 0;
             
             const frVal = r.scope > 0 ? ((pVal / r.scope) * 100).toFixed(2) : "0.00";
             const apVal = r.scope > 0 ? ((aVal / r.scope) * 100).toFixed(2) : "0.00";
             
-            document.getElementById(`fr_${r.sr}`).innerText = frVal + '%';
-            document.getElementById(`ap_${r.sr}`).innerText = apVal + '%';
+            const frEl = document.getElementById(`fr_${r.sr}`);
+            const apEl = document.getElementById(`ap_${r.sr}`);
+            
+            if (frEl) frEl.innerText = frVal + '%';
+            if (apEl) apEl.innerText = apVal + '%';
             
             ts += r.scope; tp += pVal; ta += aVal; tot += oVal;
         });

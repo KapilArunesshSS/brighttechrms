@@ -34,7 +34,7 @@ EMAIL_SITE_MAP = {
     "admin.jr@brighttech.net.in": "JAIRAJ",
     "admin.arj@brighttech.net.in": "Arjas",
     "pm.ms@brighttech.net.in": "MSSSL",
-    "admin.agni@brighttech.net.in": "AGNI",
+    "admin.agni@brighttech.net.in": ["AGNI","AGNI-IF"],
 }
 @login_required(login_url='login')
 def FFR(request):
