@@ -126,7 +126,7 @@
                     <option value="MSSSL" {% if selected_site == 'MSSSL' %}selected{% endif %}>MSSSL</option>
                     <option value="Arjas" {% if selected_site == 'Arjas' %}selected{% endif %}>Arjas</option>
                     <option value="SLR" {% if selected_site == 'SLR' %}selected{% endif %}>SLR</option>
-                    <option value="AGNI-CCM" {% if selected_site == 'AGNI' %}selected{% endif %}>AGNI-CCM</option>
+                    <option value="AGNI-CCM" {% if selected_site == 'AGNI-CCM' %}selected{% endif %}>AGNI-CCM</option>
                     <option value="AGNI-IF" {% if selected_site == 'AGNI-IF' %}selected{% endif %}>AGNI-IF</option>
                 {% else %}
                     {% if selected_site != "NONE" %}
@@ -174,7 +174,6 @@
 </div>
 
 <script>
-    // sitesList only contains unique physical sites for indicator generation
     const sitesList = ["BMM", "JAIRAJ", "MSSSL", "Arjas", "SLR", "AGNI"];
     
     const masterData = [
@@ -367,24 +366,19 @@
 
     /**
      * Aggregated site indicators function.
-     * Combines AGNI and AGNI-IF data for a single display card.
+     * Combines AGNI-CCM and AGNI-IF data for a single display card labeled "AGNI".
      */
     function initSiteIndicators() {
         const panel = document.getElementById('site-indicators');
         panel.innerHTML = '';
         
         sitesList.forEach(siteName => {
-            // Determine which internal site keys match this visual indicator
-            const isAgniGroup = (siteName === "AGNI");
-            const groupFilter = isAgniGroup ? ["AGNI-CCM", "AGNI-IF"] : [siteName];
-
-            // Check if any sub-site in the group has uploaded data
+            const groupFilter = (siteName === "AGNI") ? ["AGNI-CCM", "AGNI-IF"] : [siteName];
             const hasData = dbEntries.some(e => groupFilter.includes(e.site));
             
             let siteTotalScope = 0;
             let siteTotalPresent = 0;
             
-            // Calculate aggregated FFR from masterData and dbEntries
             const siteProfiles = masterData.filter(m => groupFilter.includes(m.site));
             siteProfiles.forEach(sp => {
                 siteTotalScope += sp.scope;
@@ -414,6 +408,10 @@
         });
     }
 
+    /**
+     * FIX: Restored the hidden inputs (dept, desig, skill, scope).
+     * The IntegrityError happened because the backend was receiving 'None' for these fields.
+     */
     function loadTable() {
         const site = "{{ selected_site|default:'ALL' }}";
         const tbody = document.getElementById('table-body');
@@ -429,11 +427,26 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${p.sr}</td>
-                <td style="font-weight: 700; color: #7f8c8d;">${p.site}<input type="hidden" name="site_${p.sr}" value="${p.site}"></td>
-                <td>${p.dept}<input type="hidden" name="dept_${p.sr}" value="${p.dept}"></td>
-                <td>${p.desig}<input type="hidden" name="desig_${p.sr}" value="${p.desig}"></td>
-                <td>${getBadge(p.skill)}<input type="hidden" name="skill_${p.sr}" value="${p.skill}"></td>
-                <td class="scope-cell">${p.scope}<input type="hidden" name="scope_${p.sr}" value="${p.scope}"></td>
+                <td style="font-weight: 700; color: #7f8c8d;">
+                    ${p.site}
+                    <input type="hidden" name="site_${p.sr}" value="${p.site}">
+                </td>
+                <td>
+                    ${p.dept}
+                    <input type="hidden" name="dept_${p.sr}" value="${p.dept}">
+                </td>
+                <td>
+                    ${p.desig}
+                    <input type="hidden" name="desig_${p.sr}" value="${p.desig}">
+                </td>
+                <td>
+                    ${getBadge(p.skill)}
+                    <input type="hidden" name="skill_${p.sr}" value="${p.skill}">
+                </td>
+                <td class="scope-cell">
+                    ${p.scope}
+                    <input type="hidden" name="scope_${p.sr}" value="${p.scope}">
+                </td>
                 <td class="input-cell"><input type="number" name="p_${p.sr}" oninput="update()" value="${db ? db.p : 0}"></td>
                 <td class="input-cell"><input type="number" name="a_${p.sr}" oninput="update()" value="${db ? db.a : 0}"></td>
                 <td class="abs-pct-cell" id="ap_${p.sr}">0%</td>
