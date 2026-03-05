@@ -119,7 +119,7 @@ def FFR(request):
         'user_email': user_email, 
     }
     
-    return render(request, 'main/ffr.html', context)
+    return render(request, 'ffr.html', context)
 @login_required(login_url='login')
 def export_ffr_all(request):
     site_filter = request.GET.get('site_selection', 'ALL')
