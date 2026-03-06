@@ -11,6 +11,7 @@ urlpatterns = [
     # Ensure the names match exactly
     path('FFR/', views.FFR, name='FFR'),
     path('FFR/export/', views.export_ffr, name='export_ffr'),
+    path('FFR/summary-export/', views.export_ffr_summary, name='export_ffr_summary'),
 
     # authentication
     path('login/', views.login_view, name='login'),

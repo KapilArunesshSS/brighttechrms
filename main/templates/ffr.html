@@ -9,217 +9,261 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --primary: #2c3e50; --accent: #3498db; --bg: #f8fafc;
-            --success: #22c55e; --danger: #ef4444; --warning: #f59e0b;
+            --primary: #0f172a; --accent: #2563eb; --bg: #f1f5f9;
+            --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
         }
-        body { background-color: var(--bg); }
-        .table-container { height: calc(100vh - 480px); overflow-y: auto; }
-        thead th { position: sticky; top: 0; z-index: 20; }
-        .input-number { width: 60px; text-align: center; border-radius: 4px; border: 1px solid #e2e8f0; padding: 4px; font-weight: 700; transition: all 0.2s; }
-        .input-number:focus { border-color: var(--accent); outline: none; ring: 2px var(--accent); background-color: #fff; }
-        .site-card { transition: all 0.3s ease; border-top: 4px solid #e2e8f0; }
-        .site-card.uploaded { border-top-color: var(--success); background-color: #f0fdf4; }
         
-        /* Stats Banner Styling */
-        .stats-banner { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; background: #f1f5f9; padding: 1.25rem; border-radius: 0.75rem; border-left: 6px solid var(--accent); }
-        .stat-label { font-size: 0.7rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
-        .stat-value { font-size: 1.5rem; font-weight: 900; color: #1e293b; margin-top: 2px; }
+        /* Flexible Body: Removed overflow hidden and 100vh constraint */
+        body { 
+            background-color: var(--bg); 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Main content expands naturally */
+        .main-content { 
+            flex: 1; 
+            padding: 1.5rem; 
+            width: 100%;
+            max-width: 1920px;
+            margin: 0 auto;
+        }
+        
+        /* Table Flexibility - Now adapts to content while maintaining scroll logic */
+        .table-container { 
+            position: relative;
+            overflow: auto; 
+            border-radius: 0.75rem;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-height: 700px; /* Generous height for desktop visibility */
+            border: 1px solid #e2e8f0;
+        }
+        
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+
+        /* Vertical Stickiness - Sticks to the container top */
+        thead th { 
+            position: sticky; top: 0; z-index: 50; 
+            background-color: #0f172a !important; color: white !important;
+            border-bottom: 1px solid #334155; border-right: 1px solid #334155;
+            text-align: center; white-space: nowrap;
+        }
+        thead tr:nth-child(2) th { top: 41px; z-index: 49; }
+
+        /* Horizontal Stickiness - Designation column stays fixed while moving right */
+        .sticky-col-left {
+            position: sticky; left: 0; z-index: 30;
+            background-color: white; /* Solid background to prevent see-through */
+            border-right: 2px solid #e2e8f0 !important;
+        }
+        thead th.sticky-col-left { z-index: 60; background-color: #0f172a !important; }
+        tr:hover .sticky-col-left { background-color: #f8fafc; }
+
+        .table-input { 
+            width: 60px; text-align: center; border-radius: 6px; border: 1px solid #e2e8f0; 
+            padding: 4px; font-weight: 800; transition: all 0.2s; background: #fff;
+        }
+        .table-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        
+        /* Responsive Stats Banner */
+        .stats-banner-ui {
+            background: white; border-radius: 0.75rem; border-left: 8px solid #3b82f6;
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            padding: 1.5rem; margin-bottom: 1.5rem; gap: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stat-group { border-right: 1px solid #f1f5f9; padding-right: 1rem; }
+        .stat-group:last-child { border-right: none; }
+        .stat-ui-label { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+        .stat-ui-value { font-size: 1.6rem; font-weight: 900; color: #1e293b; line-height: 1; }
+
+        /* Flexible Cards */
+        .site-card { border-top-width: 4px; transition: all 0.3s ease; border-radius: 1rem; background: white; padding: 1.25rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .site-card.uploaded { border-top-color: var(--success); background-color: #f0fdf4; }
     </style>
     <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
 </head>
-<body class="p-4 md:p-8 font-sans text-slate-800">
+<body>
 
-    <div class="max-w-[1800px] mx-auto bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
-        
-        <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-6 gap-4">
+    <!-- Header - Fixed top but flexible width -->
+    <header class="bg-white p-4 border-b border-slate-200 shadow-sm sticky top-0 z-[100]">
+        <div class="max-w-[1850px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-4">
-                <a href="/" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2.5 rounded-xl transition shadow-sm">
+                <a href="/" class="bg-slate-100 hover:bg-slate-200 text-slate-600 w-10 h-10 flex items-center justify-center rounded-xl transition">
                     <i class="fas fa-arrow-left"></i>
                 </a>
                 <div>
-                    <h1 class="text-2xl font-black text-slate-900 tracking-tight">FFR Manpower Ledger</h1>
-                    <p class="text-xs font-bold text-emerald-600 uppercase tracking-widest">
-                        <i class="fas fa-database mr-1"></i> Database 
-                    </p>
+                    <h1 class="text-xl font-black text-slate-900 tracking-tight leading-none mb-1">Manpower Ledger</h1>
+                    <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest"><i class="fas fa-database mr-1"></i> Database Mode Active</p>
                 </div>
             </div>
             
             <div class="flex items-center gap-3">
-                <button type="button" onclick="exportExcel()"
-                        class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-100 transform hover:scale-105 active:scale-95">
-                    <i class="fas fa-file-excel"></i> Export Excel
+                <div class="hidden lg:flex flex-col items-end px-4 border-r border-slate-200">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Current Session</span>
+                    <span class="text-sm font-black text-slate-700">{% if current_date %}{{ current_date }}{% else %}{% now "Y-m-d" %}{% endif %}</span>
+                </div>
+                <button type="button" onclick="exportExcel()" class="bg-white hover:bg-slate-50 text-emerald-600 border-2 border-emerald-600 px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 shadow-sm">
+                    <i class="fas fa-file-excel"></i> Export Daily
                 </button>
+            </div>
+        </div>
+    </header>
 
-                <div class="hidden md:block text-right border-l pl-4 border-slate-200">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Session Date</p>
-                    <p class="text-xs font-black text-slate-700">{{ current_date }}</p>
-                </div>
-            </div>
-        </header>
+    <!-- Natural scrolling content -->
+    <main class="main-content">
+        
+        <!-- Site Indicators - Flexible Grid -->
+        <div id="site-indicators" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6"></div>
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="mb-6 p-4 rounded-xl font-bold flex items-center gap-3 bg-blue-50 text-blue-700 border border-blue-100">
-                    <i class="fas fa-info-circle"></i>
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-
-        <!-- Site Indicators Cards -->
-        <div id="site-indicators" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6"></div>
-
-        <!-- NEW FEATURE: Stats Banner -->
-        <div class="stats-banner mb-8">
-            <div class="stat-item">
-                <p class="stat-label">Active Site</p>
-                <p class="stat-value text-slate-700">{{ selected_site|default:"ALL" }}</p>
+        <!-- Stats Banner - Flexible Grid -->
+        <div class="stats-banner-ui">
+            <div class="stat-group">
+                <p class="stat-ui-label">Active Site</p>
+                <p class="stat-ui-value">{{ selected_site|default:"ALL SITE" }}</p>
             </div>
-            <div class="stat-item">
-                <p class="stat-label">Total Site Scope</p>
-                <p class="stat-value" id="global-scope">0</p>
+            <div class="stat-group">
+                <p class="stat-ui-label">Total Site Scope</p>
+                <p class="stat-ui-value" id="global-scope">0</p>
             </div>
-            <div class="stat-item">
-                <p class="stat-label">Avg. Site FFR %</p>
-                <p class="stat-value text-emerald-600" id="global-ffr">0.00%</p>
+            <div class="stat-group">
+                <p class="stat-ui-label">Avg. Site FFR %</p>
+                <p class="stat-ui-value text-emerald-500" id="global-ffr">0.00%</p>
             </div>
-            <div class="stat-item">
-                <p class="stat-label">Avg. Absent %</p>
-                <p class="stat-value text-red-500" id="global-absent">0.00%</p>
+            <div class="stat-group">
+                <p class="stat-ui-label">Avg. Absent %</p>
+                <p class="stat-ui-value text-rose-500" id="global-absent">0.00%</p>
             </div>
-            <div class="stat-item">
-                <p class="stat-label">OT Man Days</p>
-                <p class="stat-value text-amber-500" id="global-ot">0.00</p>
+            <div class="stat-group border-none">
+                <p class="stat-ui-label">OT Man Days</p>
+                <p class="stat-ui-value text-amber-500" id="global-ot">0.00</p>
             </div>
         </div>
 
-        <!-- Filter & Date Controls -->
-        <div class="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-slate-200 flex flex-wrap items-end gap-6">
-            <form method="GET" id="filterForm" class="flex flex-wrap items-end gap-6 w-full">
-                <div class="flex flex-col gap-1.5">
-                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-tighter">Today</label>
-                    <!-- Fixed: Used 'now' tag fallback to ensure YYYY-MM-DD is always present -->
-                    <input type="date" value="{% if current_date %}{{ current_date }}{% else %}{% now "Y-m-d" %}{% endif %}" readonly
-                           class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-bold text-slate-400 cursor-not-allowed text-sm">
-                </div>
-
-                <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Report Date (Data Entry)</label>
-                    <input type="date" name="report_date" id="report_date_picker" value="{{ report_date }}" onchange="this.form.submit()"
-                           class="bg-white border-2 border-blue-100 rounded-lg px-4 py-2.5 font-bold text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none hover:border-blue-300 transition-colors">
-                </div>
+        <!-- Filters - Highly Flexible Wrap -->
+        <div class="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-slate-200">
+            <div class="flex flex-col lg:flex-row lg:items-end gap-8">
                 
-                <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Site Selection</label>
-                    <select name="site_selection" id="site_selection_picker" onchange="this.form.submit()"
-                            class="bg-white border border-slate-200 rounded-lg px-4 py-2.5 font-bold text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none min-w-[200px] cursor-pointer">
-                        <option value="ALL" {% if selected_site == 'ALL' %}selected{% endif %}>ALL SITE</option>
-                        <option value="BMM" {% if selected_site == 'BMM' %}selected{% endif %}>BMM</option>
-                        <option value="AGNI" {% if selected_site == 'AGNI' %}selected{% endif %}>AGNI </option>
-                        <option value="JAIRAJ" {% if selected_site == 'JAIRAJ' %}selected{% endif %}>JAIRAJ</option>
-                        <option value="Arjas" {% if selected_site == 'Arjas' %}selected{% endif %}>Arjas</option>
-                        <option value="SLR" {% if selected_site == 'SLR' %}selected{% endif %}>SLR</option>
-                        <option value="MSSSL" {% if selected_site == 'MSSSL' %}selected{% endif %}>MSSSL</option>
-                    </select>
+                <!-- Daily Navigation -->
+                <form method="GET" id="filterForm" class="flex flex-wrap items-end gap-4 lg:border-r lg:pr-8 lg:border-slate-100">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-black text-slate-500 uppercase">Today</label>
+                        <input type="date" value="{% if current_date %}{{ current_date }}{% else %}{% now "Y-m-d" %}{% endif %}" readonly
+                               class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 font-bold text-slate-400 cursor-not-allowed text-sm">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-black text-blue-600 uppercase">Report Date</label>
+                        <input type="date" name="report_date" id="report_date_picker" value="{{ report_date|default:'' }}" onchange="this.form.submit()"
+                               class="bg-blue-50 border-2 border-blue-100 rounded-xl px-4 py-2 font-bold text-slate-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-black text-slate-500 uppercase">Site Selection</label>
+                        <select name="site_selection" id="site_selection_picker" onchange="this.form.submit()"
+                                class="bg-white border border-slate-200 rounded-xl px-4 py-2 font-bold text-slate-700 text-sm min-w-[200px] shadow-sm">
+                            <option value="ALL" {% if selected_site == 'ALL' %}selected{% endif %}>ALL SITE (Global View)</option>
+                            <option value="BMM" {% if selected_site == 'BMM' %}selected{% endif %}>BMM</option>
+                            <option value="AGNI" {% if selected_site == 'AGNI' %}selected{% endif %}>AGNI (Total)</option>
+                            <option value="JAIRAJ" {% if selected_site == 'JAIRAJ' %}selected{% endif %}>JAIRAJ</option>
+                            <option value="Arjas" {% if selected_site == 'Arjas' %}selected{% endif %}>ARJAS</option>
+                            <option value="SLR" {% if selected_site == 'SLR' %}selected{% endif %}>SLR</option>
+                            <option value="MSSSL" {% if selected_site == 'MSSSL' %}selected{% endif %}>MSSSL</option>
+                        </select>
+                    </div>
+                </form>
+
+                <!-- Monthly Summary Navigation -->
+                <div class="flex flex-wrap items-end gap-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-black text-emerald-600 uppercase">Summary From</label>
+                        <input type="date" id="sum_from" class="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2 font-bold text-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-black text-emerald-600 uppercase">Summary To</label>
+                        <input type="date" id="sum_to" class="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2 font-bold text-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <button type="button" onclick="exportSummary()"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold transition flex items-center gap-2 shadow-lg transform active:scale-95 text-sm">
+                        <i class="fas fa-file-contract"></i> Export Summary
+                    </button>
                 </div>
-            </form>
+            </div>
         </div>
 
-        <!-- Main Form -->
+        <!-- Ledger Form -->
         <form id="ffrForm" method="POST">
             {% csrf_token %}
             <input type="hidden" name="report_date" value="{{ report_date }}">
             <input type="hidden" name="site_selection" value="{{ selected_site }}">
             
-            <div class="table-container bg-white border rounded-xl shadow-inner overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+            <div class="table-container">
+                <table>
                     <thead>
-                        <tr class="bg-slate-900 text-white">
-                            <th class="p-4 text-[10px] font-bold uppercase w-12 text-center tracking-widest">SN</th>
-                            <th class="p-4 text-[10px] font-bold uppercase tracking-widest">Site</th>
-                            <th class="p-4 text-[10px] font-bold uppercase tracking-widest">Dept</th>
-                            <th class="p-4 text-[10px] font-bold uppercase tracking-widest">Designation</th>
-                            <th class="p-4 text-[10px] font-bold uppercase w-20 text-center tracking-widest">Skill</th>
-                            <th class="p-4 text-[10px] font-bold uppercase w-20 text-center bg-slate-800 tracking-widest">Scope</th>
-                            <th class="p-4 text-[10px] font-bold uppercase w-24 text-center bg-slate-800 tracking-widest">Present</th>
-                            <th class="p-4 text-[10px] font-bold uppercase w-24 text-center bg-slate-800 tracking-widest">Absent</th>
-                            <th class="p-4 text-[10px] font-bold uppercase w-20 text-center bg-slate-800 tracking-widest">W/O</th>
-                            <th class="p-4 text-[10px] font-bold uppercase w-20 text-center bg-slate-800 tracking-widest">OT(h)</th>
-                            <th class="p-4 text-[10px] font-bold uppercase w-28 text-center bg-slate-800 border-l border-slate-700 tracking-widest">FFR %</th>
-                            <th class="p-4 text-[10px] font-bold uppercase tracking-widest">Remarks</th>
+                        <tr class="text-white">
+                            <th rowspan="2" class="p-3 text-[10px] font-bold uppercase w-12 border-r border-slate-700">SN</th>
+                            <th rowspan="2" class="p-3 text-[10px] font-bold uppercase border-r border-slate-700">Site</th>
+                            <th rowspan="2" class="p-3 text-[10px] font-bold uppercase border-r border-slate-700">Dept</th>
+                            <th rowspan="2" class="p-3 text-[10px] font-bold uppercase sticky-col-left min-w-[240px]">Designation</th>
+                            <th rowspan="2" class="p-3 text-[10px] font-bold uppercase w-20 border-r border-slate-700">Skill</th>
+                            <th rowspan="2" class="p-3 text-[10px] font-bold uppercase w-20 bg-slate-800">Scope</th>
+                            <th colspan="6" class="p-2 text-[10px] font-black uppercase bg-slate-800 border-b border-slate-700 tracking-widest">
+                                DATE : {{ report_date }}
+                            </th>
+                            <th rowspan="2" class="p-3 text-[10px] font-bold uppercase min-w-[180px]">Remarks</th>
+                        </tr>
+                        <tr class="text-white">
+                            <th class="p-2 text-[10px] font-bold w-16 bg-slate-700">P</th>
+                            <th class="p-2 text-[10px] font-bold w-16 bg-slate-700">A</th>
+                            <th class="p-2 text-[10px] font-bold w-20 bg-slate-700">Abs%</th>
+                            <th class="p-2 text-[10px] font-bold w-16 bg-slate-700">W/O</th>
+                            <th class="p-2 text-[10px] font-bold w-16 bg-slate-700">OT</th>
+                            <th class="p-2 text-[10px] font-bold w-24 bg-blue-900">FFR%</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         {% for row in display_list %}
-                        <tr class="hover:bg-blue-50/50 transition-colors">
-                            <td class="p-3 text-center text-xs text-slate-400 font-mono">{{ row.sr_no }}</td>
-                            <td class="p-3 font-black text-blue-600 text-sm whitespace-nowrap">{{ row.site }}</td>
-                            <td class="p-3 text-slate-500 text-[11px] font-bold uppercase tracking-tighter">{{ row.dept }}</td>
-                            <td class="p-3 text-slate-900 font-bold text-sm">{{ row.desig }}</td>
+                        <tr class="hover:bg-blue-50/40 transition-colors group">
+                            <td class="p-3 text-center font-mono text-xs text-slate-400 border-r">{{ row.sr_no }}</td>
+                            <td class="p-3 font-black text-blue-700 text-xs whitespace-nowrap">{{ row.site }}</td>
+                            <td class="p-3 text-slate-500 text-[10px] font-bold uppercase">{{ row.dept }}</td>
+                            <td class="p-3 text-slate-900 font-bold text-sm leading-tight sticky-col-left">{{ row.desig }}</td>
                             <td class="p-3 text-center">
                                 <span class="px-2 py-0.5 rounded text-[10px] font-black bg-slate-100 text-slate-600 border border-slate-200">{{ row.skill }}</span>
                             </td>
-                            <td class="p-3 text-center font-black text-slate-900 bg-slate-50/50">{{ row.scope }}</td>
+                            <td class="p-3 text-center font-black text-slate-900 bg-slate-50 border-x">{{ row.scope }}</td>
                             
-                            <td class="p-2 text-center">
-                                <input type="number" name="p_{{ row.id }}" value="{{ row.p }}" min="0" oninput="calcRow({{ row.id }}, {{ row.scope }})"
-                                       class="input-number text-blue-700 bg-blue-50/30">
-                            </td>
-                            <td class="p-2 text-center">
-                                <input type="number" name="a_{{ row.id }}" value="{{ row.a }}" min="0" oninput="calcRow({{ row.id }}, {{ row.scope }})"
-                                       class="input-number text-red-600 bg-red-50/30">
-                            </td>
-                            <td class="p-2 text-center">
-                                <input type="number" name="w_{{ row.id }}" value="{{ row.w }}" min="0" class="input-number text-slate-500">
-                            </td>
-                            <td class="p-2 text-center">
-                                <input type="number" name="o_{{ row.id }}" value="{{ row.o }}" min="0" oninput="calcRow({{ row.id }}, {{ row.scope }})"
-                                       class="input-number text-amber-600 bg-amber-50/30">
-                            </td>
+                            <td class="p-2 text-center border-l"><input type="number" name="p_{{ row.id }}" value="{{ row.p }}" min="0" oninput="calcRow({{ row.id }}, {{ row.scope }})" class="table-input text-blue-700"></td>
+                            <td class="p-2 text-center"><input type="number" name="a_{{ row.id }}" value="{{ row.a }}" min="0" oninput="calcRow({{ row.id }}, {{ row.scope }})" class="table-input text-rose-600"></td>
+                            <td class="p-2 text-center text-[11px] font-black text-rose-400" id="abs_{{ row.id }}">{{ row.abs_pct }}%</td>
+                            <td class="p-2 text-center"><input type="number" name="w_{{ row.id }}" value="{{ row.w }}" min="0" class="table-input text-slate-500"></td>
+                            <td class="p-2 text-center"><input type="number" name="o_{{ row.id }}" value="{{ row.o }}" min="0" oninput="calcRow({{ row.id }}, {{ row.scope }})" class="table-input text-amber-600"></td>
+                            <td class="p-3 text-center font-black text-blue-700 bg-blue-50/30 border-l" id="fr_{{ row.id }}">{{ row.ffr|floatformat:1 }}%</td>
                             
-                            <td class="p-3 text-center font-black text-blue-700 bg-slate-50/50 border-l border-slate-200" id="fr_{{ row.id }}">
-                                {{ row.ffr|floatformat:1 }}%
-                            </td>
-                            
-                            <td class="p-2">
-                                <input type="text" name="rem_{{ row.id }}" value="{{ row.rem }}" placeholder="..."
-                                       class="w-full px-3 py-1.5 border border-slate-200 rounded text-xs focus:border-blue-500 outline-none">
-                            </td>
+                            <td class="p-2"><input type="text" name="rem_{{ row.id }}" value="{{ row.rem }}" placeholder="..." class="w-full px-3 py-2 border border-slate-200 rounded-lg text-[11px] focus:border-blue-500 outline-none bg-slate-50/50"></td>
                         </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="12" class="p-20 text-center">
-                                <div class="flex flex-col items-center gap-4 text-slate-300">
-                                    <i class="fas fa-database text-6xl"></i>
-                                    <p class="font-bold text-slate-400 uppercase tracking-widest text-xs">No records found for selected criteria</p>
-                                </div>
-                            </td>
-                        </tr>
+                        <tr><td colspan="13" class="p-24 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">No records found.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
 
-            <div class="flex justify-end mt-6">
+            <!-- Flexible Action Footer -->
+            <div class="flex justify-end pt-8 pb-12">
                 <button type="submit" 
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-black text-lg transition flex items-center gap-3 shadow-xl shadow-blue-200 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-xl font-black text-xl transition flex items-center gap-3 shadow-2xl shadow-blue-300 transform active:scale-95 disabled:opacity-50"
                         {% if selected_site == 'ALL' %}disabled title="Global view is read-only"{% endif %}>
-                    <i class="fas fa-cloud-upload-alt"></i> Save Records
+                    <i class="fas fa-save"></i> Save Records
                 </button>
             </div>
         </form>
-    </div>
+    </main>
 
     <script>
-        const sitesList = ["BMM", "JAIRAJ", "MSSSL", "Arjas", "SLR", "AGNI"];
-        
-        // Initial table data injected from backend
-        const tableData = [
-            {% for row in display_list %}
-            { id: {{ row.id }}, site: "{{ row.site }}", scope: {{ row.scope }}, p: {{ row.p }}, a: {{ row.a }}, o: {{ row.o }} },
-            {% endfor %}
-        ];
+        const tableData = [{% for row in display_list %}{ id: {{ row.id }}, site: "{{ row.site }}", scope: {{ row.scope }}, p: {{ row.p }}, a: {{ row.a }}, o: {{ row.o }} },{% endfor %}];
 
         function exportExcel() {
             const date = document.getElementById('report_date_picker').value;
@@ -227,79 +271,55 @@
             window.location.href = "{% url 'export_ffr' %}?report_date=" + date + "&site_selection=" + site;
         }
 
-        /**
-         * Calculates and updates the Stats Banner values
-         */
+        function exportSummary() {
+            const from = document.getElementById('sum_from').value;
+            const to = document.getElementById('sum_to').value;
+            const site = document.getElementById('site_selection_picker').value;
+            if(!from || !to) { alert("Please select Summary From and To dates."); return; }
+            window.location.href = "{% url 'export_ffr_summary' %}?from_date=" + from + "&to_date=" + to + "&site_selection=" + site;
+        }
+
         function updateGlobalStats() {
-            let totalScope = 0;
-            let totalPresent = 0;
-            let totalAbsent = 0;
-            let totalOT = 0;
-
-            // Iterate over current table inputs to get live data
-            tableData.forEach(row => {
-                const p = parseInt(document.querySelector(`input[name="p_${row.id}"]`)?.value) || 0;
-                const a = parseInt(document.querySelector(`input[name="a_${row.id}"]`)?.value) || 0;
-                const o = parseFloat(document.querySelector(`input[name="o_${row.id}"]`)?.value) || 0;
-                
-                totalScope += row.scope;
-                totalPresent += p;
-                totalAbsent += a;
-                totalOT += o;
+            let ts=0, tp=0, ta=0, to=0;
+            tableData.forEach(r => {
+                const pValue = document.querySelector(`input[name="p_${r.id}"]`)?.value;
+                const aValue = document.querySelector(`input[name="a_${r.id}"]`)?.value;
+                const oValue = document.querySelector(`input[name="o_${r.id}"]`)?.value;
+                const p = parseInt(pValue) || 0;
+                const a = parseInt(aValue) || 0;
+                const o = parseFloat(oValue) || 0;
+                ts += r.scope; tp += p; ta += a; to += o;
             });
-
-            const ffr = totalScope > 0 ? ((totalPresent / totalScope) * 100).toFixed(2) : "0.00";
-            const abs = totalScope > 0 ? ((totalAbsent / totalScope) * 100).toFixed(2) : "0.00";
-            const otManDays = (totalOT / 8).toFixed(2);
-
-            document.getElementById('global-scope').innerText = totalScope;
-            document.getElementById('global-ffr').innerText = ffr + '%';
-            document.getElementById('global-absent').innerText = abs + '%';
-            document.getElementById('global-ot').innerText = otManDays;
+            document.getElementById('global-scope').innerText = ts;
+            document.getElementById('global-ffr').innerText = (ts > 0 ? (tp/ts*100) : 0).toFixed(2) + '%';
+            document.getElementById('global-absent').innerText = (ts > 0 ? (ta/ts*100) : 0).toFixed(2) + '%';
+            document.getElementById('global-ot').innerText = (to/8).toFixed(2);
         }
 
         function initIndicators() {
-            const panel = document.getElementById('site-indicators');
-            panel.innerHTML = '';
-            
-            sitesList.forEach(siteName => {
-                const groupFilter = (siteName === "AGNI") ? ["AGNI-CCM", "AGNI-IF"] : [siteName];
-                
-                let totalScope = 0;
-                let totalPresent = 0;
-                let isUploaded = false;
-
-                tableData.filter(row => groupFilter.includes(row.site)).forEach(row => {
-                    totalScope += row.scope;
-                    totalPresent += row.p;
-                    if (row.p > 0) isUploaded = true;
-                });
-
-                const ffrValue = totalScope > 0 ? ((totalPresent / totalScope) * 100).toFixed(1) : "0.0";
-                
+            const panel = document.getElementById('site-indicators'); panel.innerHTML = '';
+            ["BMM", "JAIRAJ", "MSSSL", "Arjas", "SLR", "AGNI"].forEach(s => {
+                const filter = (s === "AGNI") ? ["AGNI-CCM", "AGNI-IF"] : [s];
+                let ts=0, tp=0, active=false;
+                tableData.filter(r => filter.includes(r.site)).forEach(r => { ts += r.scope; tp += r.p; if(r.p > 0) active=true; });
                 const card = document.createElement('div');
-                card.className = `site-card bg-white p-4 rounded-xl shadow-sm border border-slate-200 ${isUploaded ? 'uploaded' : ''}`;
-                card.innerHTML = `
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${siteName}</p>
-                    <p class="text-xl font-black ${isUploaded ? 'text-emerald-600' : 'text-slate-300'}">${ffrValue}%</p>
-                    <p class="text-[9px] font-bold mt-1 ${isUploaded ? 'text-emerald-500' : 'text-slate-300'} uppercase">
-                        ${isUploaded ? '<i class="fas fa-check-circle"></i> Uploaded' : 'Pending'}
-                    </p>
-                `;
+                card.className = `site-card shadow-sm ${active ? 'uploaded' : ''}`;
+                card.innerHTML = `<p class="text-[10px] font-black text-slate-400 uppercase mb-1">${s}</p>
+                    <p class="text-xl font-black ${active ? 'text-slate-900' : 'text-slate-300'}">${ts > 0 ? (tp/ts*100).toFixed(1) : 0.0}%</p>
+                    <p class="text-[9px] font-bold mt-1 uppercase ${active ? 'text-emerald-600' : 'text-slate-400'}">
+                    ${active ? 'Active' : 'Pending'}</p>`;
                 panel.appendChild(card);
             });
-            
             updateGlobalStats();
         }
 
         function calcRow(id, scope) {
             const p = parseInt(document.querySelector(`input[name="p_${id}"]`).value) || 0;
-            const frEl = document.getElementById(`fr_${id}`);
-            
+            const a = parseInt(document.querySelector(`input[name="a_${id}"]`).value) || 0;
             if (scope > 0) {
-                frEl.innerText = ((p / scope) * 100).toFixed(1) + '%';
+                document.getElementById(`fr_${id}`).innerText = (p/scope*100).toFixed(1) + '%';
+                document.getElementById(`abs_${id}`).innerText = (a/scope*100).toFixed(1) + '%';
             }
-            // Update global banner stats on every input change
             updateGlobalStats();
         }
 

@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate , login as login_django , logout as logout_django
 from django.contrib.auth.decorators import login_required
 from .models import Employee , ManpowerEntry , SiteStructure
-from django.db.models import Count
+from django.db.models import Count, Sum
 from datetime import datetime , date, timedelta
 import json
 
@@ -44,7 +44,7 @@ def FFR(request):
     Sends only numeric IDs to the server to prevent OOM errors.
     """
     user = request.user
-    user_email = (user.email or "").lower().strip()
+    user_email = (user.email or user.username).lower().strip()
     is_superuser = user.is_superuser
     today = date.today()
     yesterday = today - timedelta(days=1)
@@ -146,10 +146,17 @@ def FFR(request):
 def export_ffr(request):
     """
     Generates a professionally formatted Excel report matching the 
-    merged-header style. Fixes MergedCell Attribute errors.
+    reference image. Fixes MergedCell Attribute errors and formatting.
     """
     site_filter = request.GET.get('site_selection', 'ALL')
     date_filter = request.GET.get('report_date')
+
+    # Try to format date as DD/MM/YYYY for the header if it comes as YYYY-MM-DD
+    try:
+        dt = datetime.strptime(str(date_filter), '%Y-%m-%d')
+        display_date = dt.strftime('%d/%m/%Y')
+    except (ValueError, TypeError):
+        display_date = date_filter
 
     # 1. Fetch relevant Site Structure rows
     if site_filter == "ALL":
@@ -168,68 +175,213 @@ def export_ffr(request):
     ws = wb.active
     ws.title = "FFR Report"
 
-    # Style Definitions
-    header_fill = PatternFill(start_color="0F172A", end_color="0F172A", fill_type="solid")
-    white_bold = Font(color="FFFFFF", bold=True, size=10)
+    # Style Definitions (Matching the screenshot: Times New Roman, Black, No background)
+    header_font = Font(name='Times New Roman', bold=True, size=11, color="000000")
+    data_font = Font(name='Times New Roman', size=11, color="000000")
     center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
     left_align = Alignment(horizontal="left", vertical="center", wrap_text=True)
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
 
-    # 4. Construct Multi-row Headers
+    # 4. Construct Multi-row Headers (A to K)
     # Row 1
-    row1 = ['SN', 'Site', 'Dept', 'Designation', 'Skill', 'Scope', f'DATE : {date_filter}', '', '', '', '', '', 'Remarks']
+    row1 = ['Site', 'Dept', 'Designation', 'Skill', 'Scope', f'DATE : {display_date}', '', '', '', '', '']
     ws.append(row1)
     # Row 2
-    row2 = ['', '', '', '', '', '', 'P', 'A', 'Abs%', 'W/O', 'OT', 'FFR%', '']
+    row2 = ['', '', '', '', '', 'P', 'A', 'Abs%', 'W/O', 'OT', 'FFR%']
     ws.append(row2)
 
-    # Apply Merges (A-F, M vertically; G-L horizontally)
-    for col in ['A', 'B', 'C', 'D', 'E', 'F', 'M']:
+    # Apply Merges (A-E vertically; F-K horizontally)
+    for col in ['A', 'B', 'C', 'D', 'E']:
         ws.merge_cells(f'{col}1:{col}2')
-    ws.merge_cells('G1:L1')
+    ws.merge_cells('F1:K1')
 
     # Apply Header Styles
     for r in [1, 2]:
         for cell in ws[r]:
-            cell.fill = header_fill
-            cell.font = white_bold
+            cell.font = header_font
             cell.alignment = center_align
             cell.border = thin_border
+
+    # Helper function for exact percentage formatting shown in image (e.g. 16.67% vs 100.0%)
+    def format_pct(num, den):
+        if den == 0:
+            return "0.0%"
+        val = (num / den) * 100
+        # If it's a clean 1 decimal float (like 12.5% or 100.0%)
+        if round(val, 1) == round(val, 2):
+            return f"{val:.1f}%"
+        return f"{val:.2f}%"
 
     # 5. Populate Data
     for s in structure_qs:
         e = entry_map.get(s.id)
-        p, a = (e.present if e else 0), (e.absent if e else 0)
-        abs_p = f"{round((a / s.scope * 100), 1)}%" if s.scope > 0 else "0.0%"
-        ffr_p = f"{round((p / s.scope * 100), 1)}%" if s.scope > 0 else "0.0%"
+        p = e.present if e else 0
+        a = e.absent if e else 0
+        wo = e.weekly_off if e else 0
+        ot = e.overtime if e else 0
+        
+        abs_p = format_pct(a, s.scope)
+        ffr_p = format_pct(p, s.scope)
         
         ws.append([
-            s.sr_no, s.site, s.department, s.designation, s.skill_level, s.scope,
-            p, a, abs_p, (e.weekly_off if e else 0), (e.overtime if e else 0), ffr_p, (e.remarks if e else "")
+            s.site, s.department, s.designation, s.skill_level, s.scope,
+            p, a, abs_p, wo, ot, ffr_p
         ])
 
     # 6. Formatting (Bug-free Auto-width)
-    for col_idx in range(1, 14):
+    for col_idx in range(1, 12):
         column_letter = get_column_letter(col_idx)
         max_length = 0
         for row in ws.iter_rows(min_row=1):
             cell = row[col_idx-1]
-            # Safely skip MergedCells and handle values
-            if not isinstance(cell, openpyxl.cell.cell.MergedCell) and cell.value:
+            # Safely skip MergedCells and handle values (Fixes the AttributeError)
+            if type(cell).__name__ != 'MergedCell' and cell.value:
                 length = len(str(cell.value))
                 if length > max_length: max_length = length
+        
+        # Add a bit of padding to the width
         ws.column_dimensions[column_letter].width = min(max(max_length + 2, 8), 45)
 
     # 7. Data Cell Styling
     for row in ws.iter_rows(min_row=3):
         for cell in row:
             cell.border = thin_border
-            cell.alignment = left_align if cell.column in [2, 3, 4, 13] else center_align
+            cell.font = data_font
+            # Left align Site(1), Dept(2), Designation(3); Center align the rest
+            if cell.column in [1, 2, 3]:
+                cell.alignment = left_align
+            else:
+                cell.alignment = center_align
 
     # 8. Return Response
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     filename = f"FFR_Report_{site_filter}_{date_filter}.xlsx"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    wb.save(response)
+    
+    return response
+@login_required(login_url='login')
+def export_ffr_summary(request):
+    """
+    Date-Range Summary: Generates a horizontal pivot table showing daily P, A, W/O, OT, FFR
+    for each day in the selected range, matching the required Excel layout.
+    """
+    site_filter = request.GET.get('site_selection', 'ALL')
+    from_date_str = request.GET.get('from_date')
+    to_date_str = request.GET.get('to_date')
+
+    if not from_date_str or not to_date_str:
+        messages.error(request, "Select both From and To dates for summary.")
+        return redirect('FFR')
+
+    # 1. Convert strings to date objects and generate list of all dates in range
+    d1 = datetime.strptime(from_date_str, '%Y-%m-%d').date()
+    d2 = datetime.strptime(to_date_str, '%Y-%m-%d').date()
+    
+    # Optional safeguard against massive memory crashes (e.g., max 31 days)
+    num_days = (d2 - d1).days + 1
+    if num_days > 31:
+        messages.error(request, "Please select a date range of 31 days or less.")
+        return redirect('FFR')
+        
+    date_list = [d1 + timedelta(days=x) for x in range(num_days)]
+
+    # 2. Fetch Structure
+    if site_filter == "ALL":
+        structure_qs = SiteStructure.objects.all().order_by('sr_no')
+    elif site_filter == "AGNI":
+        structure_qs = SiteStructure.objects.filter(site__icontains="AGNI").order_by('sr_no')
+    else:
+        structure_qs = SiteStructure.objects.filter(site=site_filter).order_by('sr_no')
+
+    # 3. Fetch all entries within range and map them: {(structure_id, date): entry}
+    entries = ManpowerEntry.objects.filter(date__range=[from_date_str, to_date_str])
+    entry_map = {(e.structure_id, e.date): e for e in entries}
+
+    # 4. Create Workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f"Summary {from_date_str[-2:]} to {to_date_str[-2:]}"
+
+    # Styles
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    border_style = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+
+    # 5. Construct Headers
+    row1 = ['Site', 'Dept', 'Designation', 'Skill', 'Scope']
+    row2 = ['', '', '', '', '']
+
+    for dt in date_list:
+        dt_formatted = dt.strftime('%d/%m/%Y')
+        # Main header for the date spanning 6 columns
+        row1.extend([f"DATE : {dt_formatted}", '', '', '', '', ''])
+        # Sub-headers
+        row2.extend(['P', 'A', 'Abs%', 'W/O', 'OT', 'FFR%'])
+
+    ws.append(row1)
+    ws.append(row2)
+
+    # 6. Apply Merges for Headers
+    # Merge Site, Dept, Designation, Skill, Scope vertically
+    for col_idx in range(1, 6):
+        c_letter = get_column_letter(col_idx)
+        ws.merge_cells(f'{c_letter}1:{c_letter}2')
+
+    # Merge the DATE headers horizontally (6 columns per date)
+    start_col = 6
+    for dt in date_list:
+        start_letter = get_column_letter(start_col)
+        end_letter = get_column_letter(start_col + 5)
+        ws.merge_cells(f'{start_letter}1:{end_letter}1')
+        start_col += 6
+
+    # Apply Header Styling
+    for r in [1, 2]:
+        for cell in ws[r]:
+            cell.font = bold_font
+            cell.alignment = center_align
+            cell.border = border_style
+
+    # 7. Populate Data Rows
+    for s in structure_qs:
+        row_data = [s.site, s.department, s.designation, s.skill_level, s.scope]
+        
+        for dt in date_list:
+            e = entry_map.get((s.id, dt))
+            if e:
+                scope = s.scope
+                abs_pct = f"{round((e.absent / scope * 100), 1)}%" if scope > 0 else "0.0%"
+                ffr_pct = f"{round((e.present / scope * 100), 1)}%" if scope > 0 else "0.0%"
+                row_data.extend([e.present, e.absent, abs_pct, e.weekly_off, e.overtime, ffr_pct])
+            else:
+                # Fill zeros if no data uploaded for this day
+                row_data.extend([0, 0, "0.0%", 0, 0, "0.0%"])
+        
+        ws.append(row_data)
+
+    # 8. Adjust Widths & Borders for Data
+    max_col = 5 + (len(date_list) * 6)
+    
+    ws.column_dimensions['A'].width = 15
+    ws.column_dimensions['B'].width = 20
+    ws.column_dimensions['C'].width = 30
+    ws.column_dimensions['D'].width = 10
+    ws.column_dimensions['E'].width = 8
+    
+    for col_idx in range(6, max_col + 1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = 8
+
+    # Apply borders to all appended data rows
+    for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=1, max_col=max_col):
+        for cell in row:
+            cell.border = border_style
+            if cell.column >= 4: # Center align from Skill onwards
+                cell.alignment = Alignment(horizontal='center')
+
+    # Return as downloadable Excel file
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="Summary_{site_filter}_{from_date_str}_to_{to_date_str}.xlsx"'
     wb.save(response)
     return response
 @login_required(login_url='login')
