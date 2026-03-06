@@ -2,110 +2,66 @@ from django.db import models
 
 class Employee(models.Model):
     """
-    Represents an employee profile in the database, corresponding to the
-    'New Employee Registration' form.
+    Represents an employee profile.
     """
-    # --- Renamed field to ref_id ---
-    ref_id = models.CharField(
-        max_length=20, 
-        unique=True, 
-        blank=True, 
-        editable=False,
-        help_text="Custom, auto-generated employee ID (e.g., RMS0001)."
-    )
-
-    # Corresponds to the 'Full Name' input field.
-    name = models.CharField(max_length=255, help_text="Full name of the employee.")
-
-    # Corresponds to the 'Age' input field.
-    age = models.PositiveIntegerField(help_text="Age of the employee.")
-
-    # Corresponds to the 'Company' dropdown.
-    company = models.CharField(
-        max_length=50,
-        default='Default Company',
-        help_text="Company the employee is being registered for."
-    )
-
-    # Corresponds to the 'Job Role' dropdown.
-    role = models.CharField(max_length=150, help_text="Job role of the employee.")
-
-    # Corresponds to the 'Application Status' dropdown.
-    status = models.CharField(
-        max_length=10,
-        default='pending',
-        help_text="Current status of the application."
-    )
-
-    # Corresponds to the 'Upload Resume' file input.
-    resume = models.FileField(
-        upload_to='resumes/',
-        null=True,
-        blank=True,
-        help_text="The employee's resume file."
-    )
-    
-    # --- NEW FIELD ---
-    # Corresponds to the 'Upload Offer Letter' file input.
-    offer_letter = models.FileField(
-        upload_to='offer_letters/', # Saves to a different folder
-        null=True, 
-        blank=True,
-        help_text="The employee's offer letter file."
-    )
-
-    # --- NEW FIELD ---
-    # Corresponds to the 'Remarks' text area.
-    remarks = models.TextField(
-        null=True, 
-        blank=True,
-        help_text="Remarks, typically for 'rejected' status."
-    )
-    
-    # Creating Contact
+    ref_id = models.CharField(max_length=20, unique=True, blank=True, editable=False)
+    name = models.CharField(max_length=255)
+    age = models.PositiveIntegerField()
+    company = models.CharField(max_length=50, default='Default Company')
+    role = models.CharField(max_length=150)
+    status = models.CharField(max_length=10, default='pending')
+    resume = models.FileField(upload_to='resumes/', null=True, blank=True)
+    offer_letter = models.FileField(upload_to='offer_letters/', null=True, blank=True)
+    remarks = models.TextField(null=True, blank=True)
     contact_number = models.CharField(max_length=15, unique=True)
-
-    # Timestamps for tracking when the record was created and last updated.
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        """
-        Returns a human-readable string representation of the Employee object.
-        """
-        return f"{self.ref_id}: {self.name}"
-
     def save(self, *args, **kwargs):
-        """
-        Overrides the default save method to generate a custom employee ID.
-        """
         if not self.pk:
             last_employee = Employee.objects.all().order_by('id').last()
-            
-            if not last_employee:
-                new_id_num = 1
-            else:
-                last_id_num = int(last_employee.ref_id[3:]) 
-                new_id_num = last_id_num + 1
-            
+            new_id_num = 1 if not last_employee else int(last_employee.ref_id[3:]) + 1
             self.ref_id = f'RMS{str(new_id_num).zfill(4)}'
-            
         super(Employee, self).save(*args, **kwargs)
 
+    def __str__(self):
+        return f"{self.ref_id}: {self.name}"
+
+class SiteStructure(models.Model):
+    """
+    MASTER DATA TABLE: Stores the permanent structure of each site.
+    Equivalent to the old hardcoded MASTER_DATA_LIST.
+    """
+    sr_no = models.IntegerField(unique=True)
+    site = models.CharField(max_length=100) # e.g., AGNI-CCM, BMM, SLR
+    department = models.CharField(max_length=100)
+    designation = models.CharField(max_length=150)
+    skill_level = models.CharField(max_length=10)
+    scope = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['sr_no']
+        verbose_name = "Site Structure Row"
+
+    def __str__(self):
+        return f"[{self.sr_no}] {self.site} - {self.designation}"
 
 class ManpowerEntry(models.Model):
     """
-    Stores daily attendance records. 
-    Identification constants: date, site, department, designation.
+    DAILY DATA TABLE: Stores daily attendance records.
     """
     date = models.DateField()
+    # Link to the master structure
+    structure = models.ForeignKey(SiteStructure, on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Denormalized fields (copies of metadata at the time of entry)
     site = models.CharField(max_length=100)
     department = models.CharField(max_length=100)
     designation = models.CharField(max_length=150)
     skill_level = models.CharField(max_length=10)
-    scope = models.IntegerField(help_text="The required manpower count")
+    scope = models.IntegerField(default=0)
     
-    # Daily Input Fields (Variable)
+    # User Inputs
     present = models.IntegerField(default=0)
     absent = models.IntegerField(default=0)
     weekly_off = models.IntegerField(default=0)
@@ -114,17 +70,7 @@ class ManpowerEntry(models.Model):
 
     @property
     def ff_ratio(self):
-        """Calculates Present percentage (FFR) for templates/excel"""
-        if self.scope and self.scope > 0:
-            return round((self.present / self.scope) * 100, 2)
-        return 0.00
-
-    @property
-    def absent_ratio(self):
-        """Calculates Absent percentage for reporting"""
-        if self.scope and self.scope > 0:
-            return round((self.absent / self.scope) * 100, 2)
-        return 0.00
+        return round((self.present / self.scope) * 100, 2) if self.scope > 0 else 0.00
 
     def __str__(self):
         return f"{self.date} - {self.site} - {self.designation}"

@@ -10,7 +10,7 @@ urlpatterns = [
     path('delete/<int:employee_id>/', views.delete_employee, name='delete_employee'),
     # Ensure the names match exactly
     path('FFR/', views.FFR, name='FFR'),
-    path('FFR/export/all/', views.export_ffr_all, name='export_ffr_all'),
+    path('FFR/export/', views.export_ffr, name='export_ffr'),
 
     # authentication
     path('login/', views.login_view, name='login'),

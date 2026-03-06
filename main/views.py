@@ -3,13 +3,14 @@ from django.db import IntegrityError, transaction
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
-import openpyxl
-from openpyxl.styles import Font
+import openpyxl 
+from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+from openpyxl.utils import get_column_letter
 from django.shortcuts import render, redirect , get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate , login as login_django , logout as logout_django
 from django.contrib.auth.decorators import login_required
-from .models import Employee , ManpowerEntry
+from .models import Employee , ManpowerEntry , SiteStructure
 from django.db.models import Count
 from datetime import datetime , date, timedelta
 import json
@@ -39,119 +40,197 @@ EMAIL_SITE_MAP = {
 @login_required(login_url='login')
 def FFR(request):
     """
-    Handles the FFR Manpower Ledger logic.
-    Optimized with transaction.atomic() to prevent live server OOM crashes on AGNI site.
+    FFR Ledger: Pulls site structure from SiteStructure model.
+    Sends only numeric IDs to the server to prevent OOM errors.
     """
     user = request.user
-    user_email = (user.email or user.username or "").lower().strip()
+    user_email = (user.email or "").lower().strip()
     is_superuser = user.is_superuser
-
-    # 1. Date Logic (Default to Yesterday)
     today = date.today()
     yesterday = today - timedelta(days=1)
     
-    if request.method == 'POST':
-        requested_site = request.POST.get('site_selection', 'ALL')
-        report_date = request.POST.get('report_date', str(yesterday))
-    else:
-        requested_site = request.GET.get('site_selection', 'ALL')
-        report_date = request.GET.get('report_date', str(yesterday))
+    # 1. Capture Date & Site Selection
+    report_date = request.GET.get('report_date') or request.POST.get('report_date') or str(yesterday)
+    requested_site = request.GET.get('site_selection') or request.POST.get('site_selection') or 'ALL'
 
     # 2. Site Authorization
     selected_site = requested_site if is_superuser else EMAIL_SITE_MAP.get(user_email, "NONE")
 
-    # 3. Optimized POST Handling
+    # 3. Handle POST (Saving Attendance)
     if request.method == 'POST':
-        # Use atomic transaction to significantly reduce memory and DB load for large sites
-        with transaction.atomic():
-            present_keys = [k for k in request.POST.keys() if k.startswith('p_')]
-            
-            for p_key in present_keys:
-                sr = p_key.split('_')[1]
-                row_site = request.POST.get(f'site_{sr}')
-                
-                # Validation: Prevent unauthorized site modifications
-                if not is_superuser and row_site != selected_site:
-                    continue 
-                
-                try:
-                    defaults = {
-                        'scope': int(request.POST.get(f'scope_{sr}', 0)),
-                        'present': int(request.POST.get(f'p_{sr}', 0)),
-                        'absent': int(request.POST.get(f'a_{sr}', 0)),
-                        'weekly_off': int(request.POST.get(f'w_{sr}', 0)),
-                        'overtime': int(request.POST.get(f'o_{sr}', 0)),
-                        'remarks': request.POST.get(f'rem_{sr}', '')
-                    }
+        present_keys = [k for k in request.POST.keys() if k.startswith('p_')]
+        
+        try:
+            with transaction.atomic():
+                for p_key in present_keys:
+                    struct_id = p_key.split('_')[1]
+                    # Lookup row metadata from DB
+                    struct = SiteStructure.objects.get(id=struct_id)
+
+                    # Security validation
+                    if not is_superuser:
+                        allowed = EMAIL_SITE_MAP.get(user_email)
+                        if allowed == "AGNI":
+                            if struct.site not in ["AGNI-CCM", "AGNI-IF"]: continue
+                        elif struct.site != allowed:
+                            continue
+
+                    # Safe conversion to handle empty inputs
+                    def s_int(v):
+                        try: return int(v) if v else 0
+                        except: return 0
 
                     ManpowerEntry.objects.update_or_create(
                         date=report_date,
-                        site=row_site,
-                        department=request.POST.get(f'dept_{sr}'),
-                        designation=request.POST.get(f'desig_{sr}'),
-                        skill_level=request.POST.get(f'skill_{sr}'),
-                        defaults=defaults
+                        structure=struct,
+                        defaults={
+                            'site': struct.site,
+                            'department': struct.department,
+                            'designation': struct.designation,
+                            'skill_level': struct.skill_level,
+                            'scope': struct.scope,
+                            'present': s_int(request.POST.get(f'p_{struct_id}')),
+                            'absent': s_int(request.POST.get(f'a_{struct_id}')),
+                            'weekly_off': s_int(request.POST.get(f'w_{struct_id}')),
+                            'overtime': s_int(request.POST.get(f'o_{struct_id}')),
+                            'remarks': request.POST.get(f'rem_{struct_id}', '')
+                        }
                     )
-                except (ValueError, TypeError):
-                    continue
+            messages.success(request, f"Records for {selected_site} on {report_date} saved successfully.")
+        except Exception as e:
+            messages.error(request, f"Submission error: {str(e)}")
         
-        messages.success(request, f"Daily records for {selected_site} on {report_date} saved successfully!")
         return redirect(f'/FFR/?report_date={report_date}&site_selection={selected_site}')
 
-    # 4. Optimized GET Retrieval
-    # Use .only() to fetch specific fields and reduce RAM usage
-    all_day_entries = ManpowerEntry.objects.filter(date=report_date).only(
-        'site', 'department', 'designation', 'skill_level', 'present', 'absent', 'weekly_off', 'overtime', 'remarks', 'scope'
-    )
-
-    if selected_site != 'ALL' and selected_site != 'NONE':
-        entries = all_day_entries.filter(site=selected_site)
+    # 4. Handle GET (Preparing the Table)
+    # Filter structure based on user selection
+    if selected_site == "ALL":
+        structure_qs = SiteStructure.objects.all()
+    elif selected_site == "AGNI":
+        structure_qs = SiteStructure.objects.filter(site__in=["AGNI-CCM", "AGNI-IF"])
     else:
-        entries = all_day_entries
+        structure_qs = SiteStructure.objects.filter(site=selected_site)
 
-    context = {
+    # Fetch daily entries and map them to the structure
+    daily_entries = ManpowerEntry.objects.filter(date=report_date).select_related('structure')
+    entry_map = {e.structure_id: e for e in daily_entries if e.structure_id}
+
+    # Build optimized display list
+    display_list = []
+    for s in structure_qs:
+        e = entry_map.get(s.id)
+        display_list.append({
+            'id': s.id,
+            'sr_no': s.sr_no,
+            'site': s.site,
+            'dept': s.department,
+            'desig': s.designation,
+            'skill': s.skill_level,
+            'scope': s.scope,
+            'p': e.present if e else 0,
+            'a': e.absent if e else 0,
+            'w': e.weekly_off if e else 0,
+            'o': e.overtime if e else 0,
+            'rem': e.remarks if e else '',
+            'ffr': e.ff_ratio if e else 0.0,
+            'abs_pct': round((e.absent / s.scope * 100), 1) if e and s.scope > 0 else 0.0
+        })
+
+    return render(request, 'ffr.html', {
         'selected_site': selected_site,
-        'report_date': report_date,      
-        'current_date': str(today),      
-        'entries': entries,              
-        'all_entries': all_day_entries,  
-        'is_superuser': is_superuser,
-        'user_email': user_email, 
-    }
-    
-    return render(request, 'ffr.html', context)
+        'report_date': report_date,
+        'display_list': display_list,
+        'is_superuser': is_superuser
+    })
 @login_required(login_url='login')
-def export_ffr_all(request):
+def export_ffr(request):
+    """
+    Generates a professionally formatted Excel report matching the 
+    merged-header style. Fixes MergedCell Attribute errors.
+    """
     site_filter = request.GET.get('site_selection', 'ALL')
     date_filter = request.GET.get('report_date')
 
-    queryset = ManpowerEntry.objects.all()
-    if site_filter != 'ALL':
-        queryset = queryset.filter(site=site_filter)
-    if date_filter:
-        queryset = queryset.filter(date=date_filter)
+    # 1. Fetch relevant Site Structure rows
+    if site_filter == "ALL":
+        structure_qs = SiteStructure.objects.all()
+    elif site_filter == "AGNI":
+        structure_qs = SiteStructure.objects.filter(site__in=["AGNI-CCM", "AGNI-IF"])
+    else:
+        structure_qs = SiteStructure.objects.filter(site=site_filter)
 
-    workbook = openpyxl.Workbook()
-    sheet = workbook.active
-    sheet.title = "FFR Ledger"
+    # 2. Fetch daily entries
+    daily_entries = ManpowerEntry.objects.filter(date=date_filter).select_related('structure')
+    entry_map = {e.structure_id: e for e in daily_entries if e.structure_id}
 
-    headers = ['Date', 'Site', 'Dept', 'Designation', 'Skill', 'Scope', 'P', 'A', 'Abs%', 'W/O', 'OT', 'FFR%', 'Remarks']
-    sheet.append(headers)
+    # 3. Initialize Workbook & Styles
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "FFR Report"
 
-    for record in queryset:
-        # Use getattr to prevent crash if property is missing
-        ff = getattr(record, 'ff_ratio', 0)
-        ab = getattr(record, 'absent_ratio', 0)
+    # Style Definitions
+    header_fill = PatternFill(start_color="0F172A", end_color="0F172A", fill_type="solid")
+    white_bold = Font(color="FFFFFF", bold=True, size=10)
+    center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left_align = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+
+    # 4. Construct Multi-row Headers
+    # Row 1
+    row1 = ['SN', 'Site', 'Dept', 'Designation', 'Skill', 'Scope', f'DATE : {date_filter}', '', '', '', '', '', 'Remarks']
+    ws.append(row1)
+    # Row 2
+    row2 = ['', '', '', '', '', '', 'P', 'A', 'Abs%', 'W/O', 'OT', 'FFR%', '']
+    ws.append(row2)
+
+    # Apply Merges (A-F, M vertically; G-L horizontally)
+    for col in ['A', 'B', 'C', 'D', 'E', 'F', 'M']:
+        ws.merge_cells(f'{col}1:{col}2')
+    ws.merge_cells('G1:L1')
+
+    # Apply Header Styles
+    for r in [1, 2]:
+        for cell in ws[r]:
+            cell.fill = header_fill
+            cell.font = white_bold
+            cell.alignment = center_align
+            cell.border = thin_border
+
+    # 5. Populate Data
+    for s in structure_qs:
+        e = entry_map.get(s.id)
+        p, a = (e.present if e else 0), (e.absent if e else 0)
+        abs_p = f"{round((a / s.scope * 100), 1)}%" if s.scope > 0 else "0.0%"
+        ffr_p = f"{round((p / s.scope * 100), 1)}%" if s.scope > 0 else "0.0%"
         
-        sheet.append([
-            str(record.date), record.site, record.department, record.designation,
-            record.skill_level, record.scope, record.present, record.absent,
-            f"{ab}%", record.weekly_off, record.overtime, f"{ff}%", record.remarks or ""
+        ws.append([
+            s.sr_no, s.site, s.department, s.designation, s.skill_level, s.scope,
+            p, a, abs_p, (e.weekly_off if e else 0), (e.overtime if e else 0), ffr_p, (e.remarks if e else "")
         ])
 
+    # 6. Formatting (Bug-free Auto-width)
+    for col_idx in range(1, 14):
+        column_letter = get_column_letter(col_idx)
+        max_length = 0
+        for row in ws.iter_rows(min_row=1):
+            cell = row[col_idx-1]
+            # Safely skip MergedCells and handle values
+            if not isinstance(cell, openpyxl.cell.cell.MergedCell) and cell.value:
+                length = len(str(cell.value))
+                if length > max_length: max_length = length
+        ws.column_dimensions[column_letter].width = min(max(max_length + 2, 8), 45)
+
+    # 7. Data Cell Styling
+    for row in ws.iter_rows(min_row=3):
+        for cell in row:
+            cell.border = thin_border
+            cell.alignment = left_align if cell.column in [2, 3, 4, 13] else center_align
+
+    # 8. Return Response
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename="FFR_Report.xlsx"'
-    workbook.save(response)
+    filename = f"FFR_Report_{site_filter}_{date_filter}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    wb.save(response)
     return response
 @login_required(login_url='login')
 def employee_list(request):

@@ -4,513 +4,306 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FFR Manpower Management System | RMS</title>
-    <!-- Include SheetJS for Client-Side Validation and logic -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title>FFR Manpower Ledger | Brighttech RMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6;
-            --success: #27ae60; --danger: #e74c3c; --warning: #f39c12;
-            --muted: #95a5a6;
+            --primary: #2c3e50; --accent: #3498db; --bg: #f8fafc;
+            --success: #22c55e; --danger: #ef4444; --warning: #f59e0b;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 1750px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        body { background-color: var(--bg); }
+        .table-container { height: calc(100vh - 480px); overflow-y: auto; }
+        thead th { position: sticky; top: 0; z-index: 20; }
+        .input-number { width: 60px; text-align: center; border-radius: 4px; border: 1px solid #e2e8f0; padding: 4px; font-weight: 700; transition: all 0.2s; }
+        .input-number:focus { border-color: var(--accent); outline: none; ring: 2px var(--accent); background-color: #fff; }
+        .site-card { transition: all 0.3s ease; border-top: 4px solid #e2e8f0; }
+        .site-card.uploaded { border-top-color: var(--success); background-color: #f0fdf4; }
         
-        /* Site Wise Indicators */
-        .site-status-panel { display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
-        .site-card { 
-            flex: 1; min-width: 140px; padding: 12px; border-radius: 8px; 
-            background: white; border: 1px solid #ddd; text-align: center; 
-            transition: all 0.3s ease;
-        }
-        .site-card.uploaded { border-top: 4px solid var(--success); background: #f0fff4; }
-        .site-card.not-uploaded { border-top: 4px solid var(--danger); background: #fff5f5; }
-        .site-card-name { font-weight: 800; font-size: 0.9rem; color: var(--primary); margin-bottom: 4px; }
-        .site-card-ffr { font-size: 1.1rem; font-weight: 800; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .dot-green { background: var(--success); box-shadow: 0 0 5px var(--success); }
-        .dot-red { background: var(--danger); box-shadow: 0 0 5px var(--danger); }
-
-        .stats-banner { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; background: #eef2f3; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 6px solid var(--accent); }
-        .stat-item { display: flex; flex-direction: column; }
-        .stat-label { font-size: 0.75rem; color: #7f8c8d; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-        .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); margin-top: 5px; }
-
-        .controls { display: flex; gap: 20px; background: #fdfdfd; padding: 20px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 25px; align-items: flex-end; flex-wrap: wrap; }
-        .control-group { display: flex; flex-direction: column; gap: 8px; }
-        label { font-weight: 700; font-size: 0.85rem; color: #444; }
-        select, input[type="date"] { padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
-        select:focus, input:focus { border-color: var(--accent); }
-        
-        input[readonly] { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; border-color: #e2e8f0; }
-
-        .table-container { max-height: 500px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; min-width: 1500px; }
-        thead th { position: sticky; top: 0; background: var(--primary); color: white; padding: 15px 10px; text-align: left; z-index: 10; font-weight: 600; font-size: 0.85rem; }
-        tbody td { padding: 10px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        tr:hover { background-color: #f1f7ff; }
-
-        .input-cell input, .remark-cell input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; transition: background 0.2s; }
-        .input-cell input { width: 60px; text-align: center; font-weight: 700; }
-        .remark-cell input { width: 100%; min-width: 200px; }
-        
-        .scope-cell { font-weight: 800; color: var(--primary); }
-        .ffr-cell { font-weight: 800; color: var(--accent); }
-        .abs-pct-cell { font-weight: 800; color: var(--danger); }
-        
-        .action-bar { margin-top: 25px; display: flex; justify-content: flex-end; align-items: center; padding-top: 20px; border-top: 2px solid #eee; }
-        .btn { border: none; padding: 12px 28px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: all 0.3s; font-size: 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
-        .btn-download-all { background: var(--warning); color: white; }
-        .btn-save { background: var(--success); color: white; box-shadow: 0 4px 10px rgba(39, 174, 96, 0.2); }
-        .btn:hover { opacity: 0.9; transform: translateY(-2px); }
-
-        .badge { padding: 4px 8px; border-radius: 5px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
-        .badge-hsk { background: #e8f4fd; color: #2980b9; }
-        .badge-sk { background: #e9f7ef; color: #27ae60; }
-        .badge-ssk { background: #fef5e7; color: #f39c12; }
-        .badge-usk { background: #fdedec; color: #c0392b; }
-
-        .alert { padding: 15px 20px; margin-bottom: 25px; border-radius: 8px; font-weight: 600; border: 1px solid transparent; }
-        .alert-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
+        /* Stats Banner Styling */
+        .stats-banner { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; background: #f1f5f9; padding: 1.25rem; border-radius: 0.75rem; border-left: 6px solid var(--accent); }
+        .stat-label { font-size: 0.7rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+        .stat-value { font-size: 1.5rem; font-weight: 900; color: #1e293b; margin-top: 2px; }
     </style>
     <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
 </head>
-<body>
+<body class="p-4 md:p-8 font-sans text-slate-800">
 
-<div class="container">
-    <header>
-        <div style="display: flex; align-items: center; gap: 20px;">
-            <a href="/" class="btn" style="background: var(--muted); color: white; padding: 8px 15px;">&larr; Dashboard</a>
-            <h1 style="margin:0; font-size: 1.6rem;">FFR Manpower Ledger</h1>
+    <div class="max-w-[1800px] mx-auto bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-6 gap-4">
+            <div class="flex items-center gap-4">
+                <a href="/" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2.5 rounded-xl transition shadow-sm">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-black text-slate-900 tracking-tight">FFR Manpower Ledger</h1>
+                    <p class="text-xs font-bold text-emerald-600 uppercase tracking-widest">
+                        <i class="fas fa-database mr-1"></i> Database 
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="exportExcel()"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-100 transform hover:scale-105 active:scale-95">
+                    <i class="fas fa-file-excel"></i> Export Excel
+                </button>
+
+                <div class="hidden md:block text-right border-l pl-4 border-slate-200">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Session Date</p>
+                    <p class="text-xs font-black text-slate-700">{{ current_date }}</p>
+                </div>
+            </div>
+        </header>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-6 p-4 rounded-xl font-bold flex items-center gap-3 bg-blue-50 text-blue-700 border border-blue-100">
+                    <i class="fas fa-info-circle"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Site Indicators Cards -->
+        <div id="site-indicators" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6"></div>
+
+        <!-- NEW FEATURE: Stats Banner -->
+        <div class="stats-banner mb-8">
+            <div class="stat-item">
+                <p class="stat-label">Active Site</p>
+                <p class="stat-value text-slate-700">{{ selected_site|default:"ALL" }}</p>
+            </div>
+            <div class="stat-item">
+                <p class="stat-label">Total Site Scope</p>
+                <p class="stat-value" id="global-scope">0</p>
+            </div>
+            <div class="stat-item">
+                <p class="stat-label">Avg. Site FFR %</p>
+                <p class="stat-value text-emerald-600" id="global-ffr">0.00%</p>
+            </div>
+            <div class="stat-item">
+                <p class="stat-label">Avg. Absent %</p>
+                <p class="stat-value text-red-500" id="global-absent">0.00%</p>
+            </div>
+            <div class="stat-item">
+                <p class="stat-label">OT Man Days</p>
+                <p class="stat-value text-amber-500" id="global-ot">0.00</p>
+            </div>
         </div>
-        <div class="btn-group">
-            <button type="button" class="btn btn-download-all" onclick="validateAndExport()">Export to Excel</button>
+
+        <!-- Filter & Date Controls -->
+        <div class="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-slate-200 flex flex-wrap items-end gap-6">
+            <form method="GET" id="filterForm" class="flex flex-wrap items-end gap-6 w-full">
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-tighter">Today</label>
+                    <!-- Fixed: Used 'now' tag fallback to ensure YYYY-MM-DD is always present -->
+                    <input type="date" value="{% if current_date %}{{ current_date }}{% else %}{% now "Y-m-d" %}{% endif %}" readonly
+                           class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-bold text-slate-400 cursor-not-allowed text-sm">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Report Date (Data Entry)</label>
+                    <input type="date" name="report_date" id="report_date_picker" value="{{ report_date }}" onchange="this.form.submit()"
+                           class="bg-white border-2 border-blue-100 rounded-lg px-4 py-2.5 font-bold text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none hover:border-blue-300 transition-colors">
+                </div>
+                
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Site Selection</label>
+                    <select name="site_selection" id="site_selection_picker" onchange="this.form.submit()"
+                            class="bg-white border border-slate-200 rounded-lg px-4 py-2.5 font-bold text-slate-700 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none min-w-[200px] cursor-pointer">
+                        <option value="ALL" {% if selected_site == 'ALL' %}selected{% endif %}>ALL SITE</option>
+                        <option value="BMM" {% if selected_site == 'BMM' %}selected{% endif %}>BMM</option>
+                        <option value="AGNI" {% if selected_site == 'AGNI' %}selected{% endif %}>AGNI </option>
+                        <option value="JAIRAJ" {% if selected_site == 'JAIRAJ' %}selected{% endif %}>JAIRAJ</option>
+                        <option value="Arjas" {% if selected_site == 'Arjas' %}selected{% endif %}>Arjas</option>
+                        <option value="SLR" {% if selected_site == 'SLR' %}selected{% endif %}>SLR</option>
+                        <option value="MSSSL" {% if selected_site == 'MSSSL' %}selected{% endif %}>MSSSL</option>
+                    </select>
+                </div>
+            </form>
         </div>
-    </header>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-success">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
+        <!-- Main Form -->
+        <form id="ffrForm" method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="report_date" value="{{ report_date }}">
+            <input type="hidden" name="site_selection" value="{{ selected_site }}">
+            
+            <div class="table-container bg-white border rounded-xl shadow-inner overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900 text-white">
+                            <th class="p-4 text-[10px] font-bold uppercase w-12 text-center tracking-widest">SN</th>
+                            <th class="p-4 text-[10px] font-bold uppercase tracking-widest">Site</th>
+                            <th class="p-4 text-[10px] font-bold uppercase tracking-widest">Dept</th>
+                            <th class="p-4 text-[10px] font-bold uppercase tracking-widest">Designation</th>
+                            <th class="p-4 text-[10px] font-bold uppercase w-20 text-center tracking-widest">Skill</th>
+                            <th class="p-4 text-[10px] font-bold uppercase w-20 text-center bg-slate-800 tracking-widest">Scope</th>
+                            <th class="p-4 text-[10px] font-bold uppercase w-24 text-center bg-slate-800 tracking-widest">Present</th>
+                            <th class="p-4 text-[10px] font-bold uppercase w-24 text-center bg-slate-800 tracking-widest">Absent</th>
+                            <th class="p-4 text-[10px] font-bold uppercase w-20 text-center bg-slate-800 tracking-widest">W/O</th>
+                            <th class="p-4 text-[10px] font-bold uppercase w-20 text-center bg-slate-800 tracking-widest">OT(h)</th>
+                            <th class="p-4 text-[10px] font-bold uppercase w-28 text-center bg-slate-800 border-l border-slate-700 tracking-widest">FFR %</th>
+                            <th class="p-4 text-[10px] font-bold uppercase tracking-widest">Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for row in display_list %}
+                        <tr class="hover:bg-blue-50/50 transition-colors">
+                            <td class="p-3 text-center text-xs text-slate-400 font-mono">{{ row.sr_no }}</td>
+                            <td class="p-3 font-black text-blue-600 text-sm whitespace-nowrap">{{ row.site }}</td>
+                            <td class="p-3 text-slate-500 text-[11px] font-bold uppercase tracking-tighter">{{ row.dept }}</td>
+                            <td class="p-3 text-slate-900 font-bold text-sm">{{ row.desig }}</td>
+                            <td class="p-3 text-center">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-slate-100 text-slate-600 border border-slate-200">{{ row.skill }}</span>
+                            </td>
+                            <td class="p-3 text-center font-black text-slate-900 bg-slate-50/50">{{ row.scope }}</td>
+                            
+                            <td class="p-2 text-center">
+                                <input type="number" name="p_{{ row.id }}" value="{{ row.p }}" min="0" oninput="calcRow({{ row.id }}, {{ row.scope }})"
+                                       class="input-number text-blue-700 bg-blue-50/30">
+                            </td>
+                            <td class="p-2 text-center">
+                                <input type="number" name="a_{{ row.id }}" value="{{ row.a }}" min="0" oninput="calcRow({{ row.id }}, {{ row.scope }})"
+                                       class="input-number text-red-600 bg-red-50/30">
+                            </td>
+                            <td class="p-2 text-center">
+                                <input type="number" name="w_{{ row.id }}" value="{{ row.w }}" min="0" class="input-number text-slate-500">
+                            </td>
+                            <td class="p-2 text-center">
+                                <input type="number" name="o_{{ row.id }}" value="{{ row.o }}" min="0" oninput="calcRow({{ row.id }}, {{ row.scope }})"
+                                       class="input-number text-amber-600 bg-amber-50/30">
+                            </td>
+                            
+                            <td class="p-3 text-center font-black text-blue-700 bg-slate-50/50 border-l border-slate-200" id="fr_{{ row.id }}">
+                                {{ row.ffr|floatformat:1 }}%
+                            </td>
+                            
+                            <td class="p-2">
+                                <input type="text" name="rem_{{ row.id }}" value="{{ row.rem }}" placeholder="..."
+                                       class="w-full px-3 py-1.5 border border-slate-200 rounded text-xs focus:border-blue-500 outline-none">
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="12" class="p-20 text-center">
+                                <div class="flex flex-col items-center gap-4 text-slate-300">
+                                    <i class="fas fa-database text-6xl"></i>
+                                    <p class="font-bold text-slate-400 uppercase tracking-widest text-xs">No records found for selected criteria</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
 
-    <!-- Site Status Indicators -->
-    <div class="site-status-panel" id="site-indicators"></div>
-
-    <div class="stats-banner">
-        <div class="stat-item"><span class="stat-label">Active Site</span><span class="stat-value">{{ selected_site|default:"ALL" }}</span></div>
-        <div class="stat-item"><span class="stat-label">Total Site Scope</span><span class="stat-value" id="disp-scope">0</span></div>
-        <div class="stat-item"><span class="stat-label">Avg. Site FFR %</span><span class="stat-value" id="disp-avg-ffr" style="color: var(--success);">0.00%</span></div>
-        <div class="stat-item"><span class="stat-label">Avg. Absent %</span><span class="stat-value" id="disp-avg-abs" style="color: var(--danger);">0.00%</span></div>
-        <div class="stat-item"><span class="stat-label">OT Man Days</span><span class="stat-value" id="disp-ot-mandays" style="color: var(--warning);">0.00</span></div>
+            <div class="flex justify-end mt-6">
+                <button type="submit" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-black text-lg transition flex items-center gap-3 shadow-xl shadow-blue-200 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed"
+                        {% if selected_site == 'ALL' %}disabled title="Global view is read-only"{% endif %}>
+                    <i class="fas fa-cloud-upload-alt"></i> Save Records
+                </button>
+            </div>
+        </form>
     </div>
 
-    <!-- Controls Section -->
-    <form method="GET" action="{% url 'FFR' %}" id="filterForm" class="controls">
-        <div class="control-group">
-            <label>Current Date (Today)</label>
-            <input type="date" id="current_date" value="{{ current_date }}" readonly>
-        </div>
-        <div class="control-group">
-            <label>Report Date (Data Entry)</label>
-            <input type="date" name="report_date" id="report_date" value="{{ report_date }}" onchange="this.form.submit()">
-        </div>
-        <div class="control-group">
-            <label>Site Selection</label>
-            <select name="site_selection" id="site_filter" onchange="this.form.submit()">
-                {% if is_superuser %}
-                    <option value="ALL" {% if selected_site == 'ALL' %}selected{% endif %}>All Sites (Global)</option>
-                    <option value="BMM" {% if selected_site == 'BMM' %}selected{% endif %}>BMM</option>
-                    <option value="JAIRAJ" {% if selected_site == 'JAIRAJ' %}selected{% endif %}>JAIRAJ</option>
-                    <option value="MSSSL" {% if selected_site == 'MSSSL' %}selected{% endif %}>MSSSL</option>
-                    <option value="Arjas" {% if selected_site == 'Arjas' %}selected{% endif %}>Arjas</option>
-                    <option value="SLR" {% if selected_site == 'SLR' %}selected{% endif %}>SLR</option>
-                    <option value="AGNI-CCM" {% if selected_site == 'AGNI-CCM' %}selected{% endif %}>AGNI-CCM</option>
-                    <option value="AGNI-IF" {% if selected_site == 'AGNI-IF' %}selected{% endif %}>AGNI-IF</option>
-                {% else %}
-                    {% if selected_site != "NONE" %}
-                        <option value="{{ selected_site }}" selected>{{ selected_site }}</option>
-                    {% else %}
-                        <option value="" disabled selected>Unauthorized</option>
-                    {% endif %}
-                {% endif %}
-            </select>
-        </div>
-    </form>
-
-    <form id="ffrForm" method="POST" action="{% url 'FFR' %}">
-        {% csrf_token %}
-        <input type="hidden" name="report_date" value="{{ report_date }}">
-        <input type="hidden" name="site_selection" value="{{ selected_site }}">
-
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 40px;">SR</th>
-                        <th style="width: 120px;">Site</th>
-                        <th style="width: 150px;">Department</th>
-                        <th>Designation</th>
-                        <th style="width: 70px;">Skill</th>
-                        <th style="width: 60px;">Scope</th>
-                        <th style="width: 80px;">Present</th>
-                        <th style="width: 80px;">Absent</th>
-                        <th style="width: 85px;">Abs. %</th>
-                        <th style="width: 70px;">W/O</th>
-                        <th style="width: 70px;">OT(hrs)</th>
-                        <th style="width: 90px;">FFR %</th>
-                        <th>Remarks</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body"></tbody>
-            </table>
-        </div>
-
-        <div class="action-bar">
-            <button type="submit" name="save_data" class="btn btn-save" {% if selected_site == "ALL" %}disabled title="Switch to a specific site to save records."{% endif %}>Save Site Record</button>
-        </div>
-    </form>
-</div>
-
-<script>
-    const sitesList = ["BMM", "JAIRAJ", "MSSSL", "Arjas", "SLR", "AGNI"];
-    
-    const masterData = [
-        {sr:1, site:"BMM", dept:"ROLLING MILL", desig:"RHF Operator", skill:"HSK", scope:5},
-        {sr:2, site:"BMM", dept:"ROLLING MILL", desig:"Mill Tech", skill:"HSK", scope:12},
-        {sr:3, site:"BMM", dept:"ROLLING MILL", desig:"Cold Shear Operator", skill:"HSK", scope:7},
-        {sr:4, site:"BMM", dept:"ROLLING MILL", desig:"Mill Tech", skill:"SK", scope:9},
-        {sr:5, site:"BMM", dept:"ROLLING MILL", desig:"Welder Gascutter", skill:"SK", scope:4},
-        {sr:6, site:"BMM", dept:"ROLLING MILL", desig:"STACKER/Bundling Operator", skill:"HSK", scope:7},
-        {sr:7, site:"BMM", dept:"ROLLING MILL", desig:"Cooling bed to Bundling Operator", skill:"SK", scope:9},
-        {sr:8, site:"BMM", dept:"ROLLING MILL", desig:"EOT Crane Operator", skill:"HSK", scope:14},
-        {sr:9, site:"BMM", dept:"ROLLING MILL", desig:"PRAYASHA CNC OPERATOR", skill:"HSK", scope:2},
-        {sr:10, site:"BMM", dept:"ROLLING MILL", desig:"LATHE-1(AUTO & SPARK CNC)", skill:"HSK", scope:2},
-        {sr:11, site:"BMM", dept:"ROLLING MILL", desig:"LATHE-2", skill:"HSK", scope:2},
-        {sr:12, site:"BMM", dept:"ROLLING MILL", desig:"CNC Notching", skill:"HSK", scope:1},
-        {sr:13, site:"BMM", dept:"ROLLING MILL", desig:"CNC Branding", skill:"HSK", scope:2},
-        {sr:14, site:"BMM", dept:"ROLLING MILL", desig:"CNC Branding (HSK)", skill:"HSK", scope:1},
-        {sr:15, site:"BMM", dept:"ROLLING MILL", desig:"SHAPPER MC", skill:"SK", scope:1},
-        {sr:16, site:"BMM", dept:"ROLLING MILL", desig:"MILLING MC", skill:"SK", scope:1},
-        {sr:17, site:"BMM", dept:"ROLLING MILL", desig:"Fitter ROLL ASSY", skill:"HSK", scope:4},
-        {sr:18, site:"BMM", dept:"ROLLING MILL", desig:"Fitter STAND ASSY", skill:"HSK", scope:4},
-        {sr:19, site:"BMM", dept:"ROLLING MILL", desig:"Guide & STAND MAINT (1)", skill:"HSK", scope:1},
-        {sr:20, site:"BMM", dept:"ROLLING MILL", desig:"Guide & STAND MAINT (2)", skill:"HSK", scope:2},
-        {sr:21, site:"BMM", dept:"ROLLING MILL", desig:"ASS.FITTER ROLL ASSY", skill:"SSK", scope:4},
-        {sr:22, site:"BMM", dept:"ROLLING MILL", desig:"ASS.FITTER M/C SHOP", skill:"SSK", scope:3},
-        {sr:23, site:"BMM", dept:"ROLLING MILL", desig:"ASS.Fitter STAND ASSY", skill:"SSK", scope:2},
-        {sr:24, site:"BMM", dept:"ROLLING MILL", desig:"FITTER-MILL & HANDLING", skill:"HSK", scope:10},
-        {sr:25, site:"BMM", dept:"ROLLING MILL", desig:"WELDER MILL & HANDLING", skill:"HSK", scope:4},
-        {sr:26, site:"BMM", dept:"ROLLING MILL", desig:"FITTER Water Complex & EOT", skill:"SK", scope:5},
-        {sr:27, site:"BMM", dept:"ROLLING MILL", desig:"WELDER ASS.FITTER WATERCOMPLEX", skill:"SK", scope:3},
-        {sr:28, site:"BMM", dept:"ROLLING MILL", desig:"SR.Electrician", skill:"HSK", scope:14},
-        {sr:29, site:"BMM", dept:"ROLLING MILL", desig:"Electrician", skill:"SK", scope:3},
-        {sr:30, site:"BMM", dept:"ROLLING MILL", desig:"QC & Despatch", skill:"SSK", scope:2},
-        {sr:31, site:"BMM", dept:"UTILITY", desig:"Pump Operator", skill:"SSK", scope:6},
-        {sr:32, site:"BMM", dept:"UTILITY", desig:"Operator cum Maint Mechanical Tech", skill:"SK", scope:6},
-        {sr:33, site:"BMM", dept:"UTILITY", desig:"Electrical Technician (UTILITY)", skill:"SK", scope:1},
-        {sr:34, site:"BMM", dept:"CNC SUPPLY", desig:"CNC Notching (JBC)", skill:"HSK", scope:10},
-        {sr:35, site:"BMM", dept:"CNC SUPPLY", desig:"CNC Branding (JBC)", skill:"HSK", scope:4},
+    <script>
+        const sitesList = ["BMM", "JAIRAJ", "MSSSL", "Arjas", "SLR", "AGNI"];
         
-        {sr:36, site:"JAIRAJ", dept:"Rolling Mill", desig:"Shift Technicians - Electrician", skill:"SK", scope:5},
-        {sr:37, site:"JAIRAJ", dept:"Rolling Mill", desig:"PULPIT Operator", skill:"SK", scope:3},
-        {sr:38, site:"JAIRAJ", dept:"Rolling Mill", desig:"SHIFT Technicians / Fitters", skill:"SK", scope:9},
-        {sr:39, site:"JAIRAJ", dept:"Rolling Mill", desig:"Crane Operator", skill:"SK", scope:6},
-        {sr:40, site:"JAIRAJ", dept:"Rolling Mill", desig:"Guide Fitter", skill:"SK", scope:3},
-        {sr:41, site:"JAIRAJ", dept:"Rolling Mill", desig:"Rolling Stand Assembly Operators", skill:"SK", scope:6},
-        {sr:42, site:"JAIRAJ", dept:"Rolling Mill", desig:"CNC Operator", skill:"SK", scope:1},
-        {sr:43, site:"JAIRAJ", dept:"Rolling Mill", desig:"Machinist", skill:"SK", scope:2},
-        {sr:44, site:"JAIRAJ", dept:"Rolling Mill", desig:"Welder & Gas Cutter", skill:"SK", scope:3},
-        {sr:45, site:"JAIRAJ", dept:"Rolling Mill", desig:"TAG Assistants", skill:"SSK", scope:4},
-        {sr:46, site:"JAIRAJ", dept:"Rolling Mill", desig:"Bundle Tagers", skill:"SSK", scope:4},
-        {sr:47, site:"JAIRAJ", dept:"Rolling Mill", desig:"Dispatch Helpers", skill:"SSK", scope:4},
-        {sr:48, site:"JAIRAJ", dept:"Rolling Mill", desig:"Technical Helpers", skill:"SSK", scope:10},
-        {sr:49, site:"JAIRAJ", dept:"SMS", desig:"Shift Technicians - Electrician", skill:"SK", scope:6},
-        {sr:50, site:"JAIRAJ", dept:"UTILITY", desig:"DCS Helpers", skill:"SSK", scope:3},
-        {sr:51, site:"JAIRAJ", dept:"UTILITY", desig:"SMS & RM - Operators", skill:"SK", scope:6},
-        {sr:52, site:"JAIRAJ", dept:"UTILITY", desig:"SMS & RM - Helpers", skill:"SSK", scope:3},
-        {sr:53, site:"JAIRAJ", dept:"UTILITY", desig:"Utilities - Operators", skill:"SK", scope:8},
-        {sr:54, site:"JAIRAJ", dept:"UTILITY", desig:"Utilities - Helpers", skill:"SSK", scope:3},
-        {sr:55, site:"JAIRAJ", dept:"UTILITY", desig:"SMS, RM, MBF, Sinter - Welder (Crane Maint)", skill:"SK", scope:5},
-        {sr:56, site:"JAIRAJ", dept:"UTILITY", desig:"Helpers - SMS, RM, MBF & Sinter", skill:"SK", scope:8},
-        {sr:57, site:"JAIRAJ", dept:"UTILITY", desig:"Shift Technicians - MRSS", skill:"SK", scope:6},
-        {sr:58, site:"JAIRAJ", dept:"UTILITY", desig:"Electricians - Cranes, Compressors, Pumphouse", skill:"SK", scope:2},
-        {sr:59, site:"JAIRAJ", dept:"UTILITY", desig:"Technician (Pump Maintenance)", skill:"SK", scope:2},
-        {sr:60, site:"JAIRAJ", dept:"UTILITY", desig:"Technician (Crane Maintenance)", skill:"SK", scope:2},
+        // Initial table data injected from backend
+        const tableData = [
+            {% for row in display_list %}
+            { id: {{ row.id }}, site: "{{ row.site }}", scope: {{ row.scope }}, p: {{ row.p }}, a: {{ row.a }}, o: {{ row.o }} },
+            {% endfor %}
+        ];
 
-        {sr:61, site:"MSSSL", dept:"BBD", desig:"Bar to Bar Peeling", skill:"HSK", scope:7},
-        {sr:62, site:"MSSSL", dept:"BBD", desig:"RM Unloading + Pointing + Shot Blasting", skill:"SSK", scope:14},
-        {sr:63, site:"MSSSL", dept:"BBD", desig:"Centreless Grinding Operator", skill:"HSK", scope:24},
-        {sr:64, site:"MSSSL", dept:"BBD", desig:"Straightener/Reeling M/C", skill:"SK", scope:13},
-        {sr:65, site:"MSSSL", dept:"BBD", desig:"Cutting Operator - Circular Saw", skill:"SK", scope:12},
-        {sr:66, site:"MSSSL", dept:"BBD", desig:"Bar to Bar (Drawing)", skill:"HSK", scope:4},
-        {sr:67, site:"MSSSL", dept:"BBD", desig:"Straightening + Chamfering Operator", skill:"SSK", scope:2},
-        {sr:68, site:"MSSSL", dept:"BBD", desig:"Polishing Operator", skill:"SK", scope:3},
-        {sr:69, site:"MSSSL", dept:"BBD", desig:"Coil to Bar Draw Bench", skill:"HSK", scope:9},
-        {sr:70, site:"MSSSL", dept:"BBD/CFD/PICKLING", desig:"Tool Room", skill:"SK", scope:2},
-        {sr:71, site:"MSSSL", dept:"BBD", desig:"Crane Operator", skill:"SK", scope:6},
-        {sr:72, site:"MSSSL", dept:"CFD", desig:"Coil to Coil Drawing Operator", skill:"HSK", scope:11},
-        {sr:73, site:"MSSSL", dept:"CFD", desig:"Compactor + Upender Operator", skill:"SSK", scope:7},
-        {sr:74, site:"MSSSL", dept:"CFD", desig:"SAPP", skill:"SSK", scope:7},
-        {sr:75, site:"MSSSL", dept:"CFD", desig:"Swaging / Pointing Operator", skill:"SK", scope:7},
-        {sr:76, site:"MSSSL", dept:"PICKLING", desig:"RM Unloading + Pickling & Phospating", skill:"HSK", scope:10},
-        {sr:77, site:"MSSSL", dept:"TSD", desig:"ECT Helper Load/Unload/Salvage", skill:"SSK", scope:4},
-        {sr:78, site:"MSSSL", dept:"TSD", desig:"UST Helper Load/Unload/Salvage", skill:"SSK", scope:4},
-        {sr:79, site:"MSSSL", dept:"TSD", desig:"Sample Preparation/Testing", skill:"SSK", scope:6},
-        {sr:80, site:"MSSSL", dept:"HEAT TREATMENT", desig:"STC Furnace", skill:"SK", scope:11},
-        {sr:81, site:"MSSSL", dept:"ELECTRICAL", desig:"Electrical-Maintainance Supervisors", skill:"HSK", scope:10},
-        {sr:82, site:"MSSSL", dept:"MECHANICAL", desig:"Mechanical-Maintainance Supervisor", skill:"HSK", scope:11},
+        function exportExcel() {
+            const date = document.getElementById('report_date_picker').value;
+            const site = document.getElementById('site_selection_picker').value;
+            window.location.href = "{% url 'export_ffr' %}?report_date=" + date + "&site_selection=" + site;
+        }
 
-        {sr:85, site:"Arjas", dept:"Rolling Mill", desig:"Welder cum gas cutter", skill:"SK", scope:3},
-        {sr:86, site:"Arjas", dept:"Rolling Mill", desig:"Bar Aligner", skill:"SSK", scope:3},
-        {sr:87, site:"Arjas", dept:"Rolling Mill", desig:"Bundling M/c Operator", skill:"SSK", scope:6},
-        {sr:88, site:"Arjas", dept:"Rolling Mill", desig:"Sling Man", skill:"SSK", scope:3},
-        {sr:89, site:"Arjas", dept:"Rolling Mill", desig:"Tag Printer", skill:"SSK", scope:3},
-        {sr:90, site:"Arjas", dept:"INS- SUPPLY", desig:"Sling Man", skill:"SSK", scope:6},
-        {sr:91, site:"Arjas", dept:"INS- SUPPLY", desig:"Helper (A)", skill:"SSK", scope:6},
-        {sr:92, site:"Arjas", dept:"INS- SUPPLY", desig:"Helper (B)", skill:"SSK", scope:3},
-        {sr:93, site:"Arjas", dept:"INS- SUPPLY", desig:"Operator", skill:"HSK", scope:6},
-        {sr:94, site:"Arjas", dept:"INS- SUPPLY", desig:"Grinder", skill:"SSK", scope:12},
-        {sr:95, site:"Arjas", dept:"INS- SUPPLY", desig:"Crane Operator", skill:"HSK", scope:1},
-        {sr:96, site:"Arjas", dept:"INS- SUPPLY", desig:"Helper", skill:"USK", scope:3},
-        {sr:97, site:"Arjas", dept:"INS- SUPPLY", desig:"Gas Cutter", skill:"SK", scope:3},
-        {sr:98, site:"Arjas", dept:"INS - TONNAGE", desig:"Dimension Checker", skill:"HSK", scope:6},
-        {sr:99, site:"Arjas", dept:"INS - TONNAGE", desig:"Gas Cutter", skill:"SK", scope:3},
-        {sr:100, site:"Arjas", dept:"INS - TONNAGE", desig:"Grinder", skill:"SSK", scope:18},
-        {sr:101, site:"Arjas", dept:"INS - TONNAGE", desig:"Helper", skill:"USK", scope:18},
-        {sr:102, site:"Arjas", dept:"INS - TONNAGE", desig:"Shift GET", skill:"HSK", scope:3},
-        {sr:103, site:"Arjas", dept:"Straitening", desig:"Helper", skill:"USK", scope:12},
-        {sr:104, site:"Arjas", dept:"Heat Treatment", desig:"Dimension Checker", skill:"HSK", scope:2},
-        {sr:105, site:"Arjas", dept:"Heat Treatment", desig:"Grinder", skill:"SSK", scope:2},
-        {sr:106, site:"Arjas", dept:"Heat Treatment", desig:"Helper", skill:"USK", scope:4},
-        {sr:107, site:"Arjas", dept:"Packaging", desig:"Helper", skill:"USK", scope:3},
+        /**
+         * Calculates and updates the Stats Banner values
+         */
+        function updateGlobalStats() {
+            let totalScope = 0;
+            let totalPresent = 0;
+            let totalAbsent = 0;
+            let totalOT = 0;
 
-        {sr:108, site:"SLR", dept:"Rolling Mill", desig:"Mill Fitter", skill:"HSK", scope:9},
-        {sr:109, site:"SLR", dept:"Rolling Mill", desig:"Roill Shop Fitter", skill:"HSK", scope:6},
-        {sr:110, site:"SLR", dept:"Rolling Mill", desig:"Guide Fitter", skill:"HSK", scope:2},
-        {sr:111, site:"SLR", dept:"Rolling Mill", desig:"Roll Shop Assistant Fitter", skill:"SK", scope:6},
-        {sr:112, site:"SLR", dept:"Rolling Mill", desig:"Gas Cutter", skill:"SK", scope:3},
-        {sr:113, site:"SLR", dept:"Rolling Mill", desig:"B H Operator", skill:"SSK", scope:30},
-        {sr:114, site:"SLR", dept:"Rolling Mill", desig:"Mill Assistant Fitter", skill:"SSK", scope:3},
-        {sr:115, site:"SLR", dept:"Rolling Mill", desig:"Office Boy", skill:"USK", scope:1},
-
-        {sr:116, site:"AGNI-CCM", dept:"ADMIN -2", desig:"Site Incharge / Recruitter", skill:"HSK", scope:1},
-        {sr:117, site:"AGNI-CCM", dept:"ADMIN -2", desig:"Admin / Time Office", skill:"SK", scope:1},
-        {sr:118, site:"AGNI-CCM", dept:"FURNACE", desig:"Melter", skill:"HSK", scope:8},
-        {sr:119, site:"AGNI-CCM", dept:"CCM", desig:"Shift Incharge", skill:"HSK", scope:4},
-        {sr:120, site:"AGNI-CCM", dept:"CCM", desig:"Mould Operator", skill:"SK", scope:13},
-        {sr:121, site:"AGNI-CCM", dept:"CCM", desig:"Gas Cutter", skill:"SK", scope:16},
-        {sr:122, site:"AGNI-CCM", dept:"CCM", desig:"SBO + Fitter", skill:"SSK", scope:6},
-        {sr:123, site:"AGNI-CCM", dept:"CCM", desig:"Teemer Man", skill:"SK", scope:6},
-        {sr:124, site:"AGNI-CCM", dept:"CCM", desig:"Laddle Man", skill:"SK", scope:8},
-        {sr:125, site:"AGNI-CCM", dept:"LADLE PREPERATION AREA", desig:"Ladle Mason", skill:"SSK", scope:4},
-        {sr:126, site:"AGNI-CCM", dept:"TUNDISH PREPERATION AREA", desig:"Tundish Mason", skill:"SSK", scope:3},
-        {sr:127, site:"AGNI-CCM", dept:"FORMER AREA", desig:"Forma Fitter", skill:"HSK", scope:1},
-        {sr:128, site:"AGNI-CCM", dept:"FORMER AREA", desig:"Forma Welder", skill:"SK", scope:2},
-        {sr:129, site:"AGNI-CCM", dept:"FORMER AREA", desig:"Forma Helper", skill:"USK", scope:2},
-        {sr:130, site:"AGNI-CCM", dept:"ELECTRICAL DEPT", desig:"Sr Electrician", skill:"HSK", scope:4},
-        {sr:131, site:"AGNI-CCM", dept:"ELECTRICAL DEPT", desig:"Jr Electrician", skill:"SK", scope:7},
-        {sr:132, site:"AGNI-CCM", dept:"MECHANICAL DEPT", desig:"Sr Mechanical Fitter", skill:"HSK", scope:13},
-        {sr:133, site:"AGNI-CCM", dept:"MECHANICAL DEPT", desig:"Jr Mechanical Fitter", skill:"SK", scope:13},
-        {sr:134, site:"AGNI-CCM", dept:"LAB TECHNICIAN", desig:"Lab Chemist", skill:"HSK", scope:7},
-        {sr:135, site:"AGNI-CCM", dept:"CCM -HELPERS", desig:"Mould Operator - Helper", skill:"USK", scope:4},
-        {sr:136, site:"AGNI-CCM", dept:"CCM -HELPERS", desig:"Ladle Man - Helper", skill:"USK", scope:6},
-        {sr:137, site:"AGNI-CCM", dept:"CCM -HELPERS", desig:"Ladle Mason- Helper", skill:"USK", scope:2},
-        {sr:138, site:"AGNI-CCM", dept:"CCM -HELPERS", desig:"Tundish Mason - Helper", skill:"USK", scope:4},
-        {sr:139, site:"AGNI-CCM", dept:"CCM -HELPERS", desig:"Billet Yard - Helper", skill:"USK", scope:4},
-        {sr:140, site:"AGNI-CCM", dept:"CCM -HELPERS", desig:"Lab Assistant - Helper", skill:"USK", scope:2},
-        {sr:141, site:"AGNI-CCM", dept:"CRANE OPERATOR", desig:"Billet Yard", skill:"HSK", scope:5},
-        {sr:142, site:"AGNI-CCM", dept:"CRANE OPERATOR", desig:"Shed -3", skill:"HSK", scope:6},
-        {sr:143, site:"AGNI-CCM", dept:"CRANE OPERATOR", desig:"Shed - 4, 7, 8, 9", skill:"HSK", scope:6},
-        {sr:144, site:"AGNI-CCM", dept:"CRANE OPERATOR", desig:"Shed 7, 8, 9", skill:"HSK", scope:14},
-
-        {sr:145, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-II", desig:"Supervisor", skill:"HSK", scope:2},
-        {sr:146, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-II", desig:"First Hand", skill:"HSK", scope:2},
-        {sr:147, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-II", desig:"Bariman", skill:"SK", scope:13},
-        {sr:148, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-II", desig:"Helper", skill:"USK", scope:14},
-        {sr:149, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-II", desig:"Patching Bariman", skill:"SK", scope:6},
-        {sr:150, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-II", desig:"Patching Helper", skill:"USK", scope:5},
-        {sr:151, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-III", desig:"Supervisor", skill:"HSK", scope:2},
-        {sr:152, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-III", desig:"First Hand", skill:"HSK", scope:2},
-        {sr:153, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-III", desig:"Bariman", skill:"SK", scope:13},
-        {sr:154, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-III", desig:"Helper", skill:"USK", scope:14},
-        {sr:155, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-III", desig:"Patching Bariman", skill:"SK", scope:6},
-        {sr:156, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-III", desig:"Patching Helper", skill:"USK", scope:5},
-        {sr:157, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-IV", desig:"Supervisor", skill:"HSK", scope:2},
-        {sr:158, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-IV", desig:"First Hand", skill:"HSK", scope:2},
-        {sr:159, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-IV", desig:"Bariman", skill:"SK", scope:13},
-        {sr:160, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-IV", desig:"Helper", skill:"USK", scope:14},
-        {sr:161, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-IV", desig:"Patching Bariman", skill:"SK", scope:5},
-        {sr:162, site:"AGNI-IF", dept:"INDUCTION FURNACE UNIT-IV", desig:"Patching Helper", skill:"USK", scope:4}
-     ];
-
-    const dbEntries = [
-        {% for e in all_entries|default:entries %}
-        {
-            site: "{{ e.site|escapejs }}",
-            dept: "{{ e.department|escapejs }}", 
-            desig: "{{ e.designation|escapejs }}",
-            skill: "{{ e.skill_level|escapejs }}", 
-            p: {{ e.present }}, a: {{ e.absent }}, w: {{ e.weekly_off }}, o: {{ e.overtime }},
-            rem: "{{ e.remarks|default:''|escapejs }}"
-        },
-        {% endfor %}
-    ];
-
-    let currentProfiles = [];
-
-    function getBadge(skill) {
-        return `<span class="badge badge-${skill.toLowerCase()}">${skill}</span>`;
-    }
-
-    /**
-     * Aggregated site indicators function.
-     * Combines AGNI-CCM and AGNI-IF data for a single display card labeled "AGNI".
-     */
-    function initSiteIndicators() {
-        const panel = document.getElementById('site-indicators');
-        panel.innerHTML = '';
-        
-        sitesList.forEach(siteName => {
-            const groupFilter = (siteName === "AGNI") ? ["AGNI-CCM", "AGNI-IF"] : [siteName];
-            const hasData = dbEntries.some(e => groupFilter.includes(e.site));
-            
-            let siteTotalScope = 0;
-            let siteTotalPresent = 0;
-            
-            const siteProfiles = masterData.filter(m => groupFilter.includes(m.site));
-            siteProfiles.forEach(sp => {
-                siteTotalScope += sp.scope;
-                const saved = dbEntries.find(d => 
-                    d.site === sp.site && d.dept === sp.dept && d.desig === sp.desig && d.skill === sp.skill
-                );
-                siteTotalPresent += saved ? saved.p : 0;
+            // Iterate over current table inputs to get live data
+            tableData.forEach(row => {
+                const p = parseInt(document.querySelector(`input[name="p_${row.id}"]`)?.value) || 0;
+                const a = parseInt(document.querySelector(`input[name="a_${row.id}"]`)?.value) || 0;
+                const o = parseFloat(document.querySelector(`input[name="o_${row.id}"]`)?.value) || 0;
+                
+                totalScope += row.scope;
+                totalPresent += p;
+                totalAbsent += a;
+                totalOT += o;
             });
 
-            const siteFFR = siteTotalScope > 0 ? ((siteTotalPresent / siteTotalScope) * 100).toFixed(1) : "0.0";
+            const ffr = totalScope > 0 ? ((totalPresent / totalScope) * 100).toFixed(2) : "0.00";
+            const abs = totalScope > 0 ? ((totalAbsent / totalScope) * 100).toFixed(2) : "0.00";
+            const otManDays = (totalOT / 8).toFixed(2);
 
-            const card = document.createElement('div');
-            card.className = `site-card ${hasData ? 'uploaded' : 'not-uploaded'}`;
-            card.innerHTML = `
-                <div class="site-card-name">
-                    <span class="status-dot ${hasData ? 'dot-green' : 'dot-red'}"></span>
-                    ${siteName}
-                </div>
-                <div class="site-card-ffr" style="color: ${hasData ? 'var(--success)' : 'var(--danger)'}">
-                    ${siteFFR}%
-                </div>
-                <div style="font-size: 0.65rem; color: #95a5a6; font-weight:bold;">
-                    ${hasData ? 'UPLOADED' : 'PENDING'}
-                </div>
-            `;
-            panel.appendChild(card);
-        });
-    }
-
-    /**
-     * FIX: Restored the hidden inputs (dept, desig, skill, scope).
-     * The IntegrityError happened because the backend was receiving 'None' for these fields.
-     */
-    function loadTable() {
-        const site = "{{ selected_site|default:'ALL' }}";
-        const tbody = document.getElementById('table-body');
-        tbody.innerHTML = '';
-        
-        currentProfiles = (site === "ALL") ? masterData : masterData.filter(d => d.site === site);
-
-        currentProfiles.forEach((p) => {
-            const db = dbEntries.find(d => 
-                d.site === p.site && d.dept === p.dept && d.desig === p.desig && d.skill === p.skill
-            );
-            
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${p.sr}</td>
-                <td style="font-weight: 700; color: #7f8c8d;">
-                    ${p.site}
-                    <input type="hidden" name="site_${p.sr}" value="${p.site}">
-                </td>
-                <td>
-                    ${p.dept}
-                    <input type="hidden" name="dept_${p.sr}" value="${p.dept}">
-                </td>
-                <td>
-                    ${p.desig}
-                    <input type="hidden" name="desig_${p.sr}" value="${p.desig}">
-                </td>
-                <td>
-                    ${getBadge(p.skill)}
-                    <input type="hidden" name="skill_${p.sr}" value="${p.skill}">
-                </td>
-                <td class="scope-cell">
-                    ${p.scope}
-                    <input type="hidden" name="scope_${p.sr}" value="${p.scope}">
-                </td>
-                <td class="input-cell"><input type="number" name="p_${p.sr}" oninput="update()" value="${db ? db.p : 0}"></td>
-                <td class="input-cell"><input type="number" name="a_${p.sr}" oninput="update()" value="${db ? db.a : 0}"></td>
-                <td class="abs-pct-cell" id="ap_${p.sr}">0%</td>
-                <td class="input-cell"><input type="number" name="w_${p.sr}" value="${db ? db.w : 0}"></td>
-                <td class="input-cell"><input type="number" name="o_${p.sr}" oninput="update()" value="${db ? db.o : 0}"></td>
-                <td class="ffr-cell" id="fr_${p.sr}">0%</td>
-                <td class="remark-cell"><input type="text" name="rem_${p.sr}" value="${db ? db.rem : ''}" placeholder="..."></td>
-            `;
-            tbody.appendChild(tr);
-        });
-        update();
-        initSiteIndicators();
-    }
-
-    function update() {
-        let ts = 0, tp = 0, ta = 0, tot = 0;
-        
-        currentProfiles.forEach(r => {
-            const pInput = document.querySelector(`input[name="p_${r.sr}"]`);
-            const aInput = document.querySelector(`input[name="a_${r.sr}"]`);
-            const oInput = document.querySelector(`input[name="o_${r.sr}"]`);
-            
-            const pVal = parseInt(pInput ? pInput.value : 0) || 0;
-            const aVal = parseInt(aInput ? aInput.value : 0) || 0;
-            const oVal = parseFloat(oInput ? oInput.value : 0) || 0;
-            
-            const frVal = r.scope > 0 ? ((pVal / r.scope) * 100).toFixed(2) : "0.00";
-            const apVal = r.scope > 0 ? ((aVal / r.scope) * 100).toFixed(2) : "0.00";
-            
-            const frEl = document.getElementById(`fr_${r.sr}`);
-            const apEl = document.getElementById(`ap_${r.sr}`);
-            
-            if (frEl) frEl.innerText = frVal + '%';
-            if (apEl) apEl.innerText = apVal + '%';
-            
-            ts += r.scope; tp += pVal; ta += aVal; tot += oVal;
-        });
-
-        document.getElementById('disp-scope').innerText = ts;
-        document.getElementById('disp-avg-ffr').innerText = (ts > 0 ? ((tp / ts) * 100).toFixed(2) : "0.00") + '%';
-        document.getElementById('disp-avg-abs').innerText = (ts > 0 ? ((ta / ts) * 100).toFixed(2) : "0.00") + '%';
-        document.getElementById('disp-ot-mandays').innerText = (tot / 8).toFixed(2);
-    }
-
-    function validateAndExport() {
-        let incomplete = false;
-        currentProfiles.forEach(r => {
-            const p = document.querySelector(`input[name="p_${r.sr}"]`).value;
-            const a = document.querySelector(`input[name="a_${r.sr}"]`).value;
-            if (p === "" || a === "") incomplete = true;
-        });
-
-        if (incomplete) {
-            alert("ALERT: System detected incomplete attendance entries. Please ensure all 'Present' and 'Absent' fields are filed for the current view before exporting to Excel.");
-            return;
+            document.getElementById('global-scope').innerText = totalScope;
+            document.getElementById('global-ffr').innerText = ffr + '%';
+            document.getElementById('global-absent').innerText = abs + '%';
+            document.getElementById('global-ot').innerText = otManDays;
         }
-        
-        const site = "{{ selected_site|default:'ALL' }}";
-        const date = "{{ report_date }}";
-        window.location.href = `{% url 'export_ffr_all' %}?site_selection=${site}&report_date=${date}`;
-    }
 
-    window.onload = loadTable;
-</script>
+        function initIndicators() {
+            const panel = document.getElementById('site-indicators');
+            panel.innerHTML = '';
+            
+            sitesList.forEach(siteName => {
+                const groupFilter = (siteName === "AGNI") ? ["AGNI-CCM", "AGNI-IF"] : [siteName];
+                
+                let totalScope = 0;
+                let totalPresent = 0;
+                let isUploaded = false;
+
+                tableData.filter(row => groupFilter.includes(row.site)).forEach(row => {
+                    totalScope += row.scope;
+                    totalPresent += row.p;
+                    if (row.p > 0) isUploaded = true;
+                });
+
+                const ffrValue = totalScope > 0 ? ((totalPresent / totalScope) * 100).toFixed(1) : "0.0";
+                
+                const card = document.createElement('div');
+                card.className = `site-card bg-white p-4 rounded-xl shadow-sm border border-slate-200 ${isUploaded ? 'uploaded' : ''}`;
+                card.innerHTML = `
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${siteName}</p>
+                    <p class="text-xl font-black ${isUploaded ? 'text-emerald-600' : 'text-slate-300'}">${ffrValue}%</p>
+                    <p class="text-[9px] font-bold mt-1 ${isUploaded ? 'text-emerald-500' : 'text-slate-300'} uppercase">
+                        ${isUploaded ? '<i class="fas fa-check-circle"></i> Uploaded' : 'Pending'}
+                    </p>
+                `;
+                panel.appendChild(card);
+            });
+            
+            updateGlobalStats();
+        }
+
+        function calcRow(id, scope) {
+            const p = parseInt(document.querySelector(`input[name="p_${id}"]`).value) || 0;
+            const frEl = document.getElementById(`fr_${id}`);
+            
+            if (scope > 0) {
+                frEl.innerText = ((p / scope) * 100).toFixed(1) + '%';
+            }
+            // Update global banner stats on every input change
+            updateGlobalStats();
+        }
+
+        window.onload = initIndicators;
+    </script>
 </body>
 </html>
