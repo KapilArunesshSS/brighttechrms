@@ -176,6 +176,7 @@
                 </form>
 
                 <!-- Monthly Summary Navigation -->
+                {% if request.user.is_superuser %}
                 <div class="flex flex-wrap items-end gap-4">
                     <div class="flex flex-col gap-1.5">
                         <label class="text-[10px] font-black text-emerald-600 uppercase">Summary From</label>
@@ -190,6 +191,7 @@
                         <i class="fas fa-file-contract"></i> Export Summary
                     </button>
                 </div>
+                {% endif %}
             </div>
         </div>
 
