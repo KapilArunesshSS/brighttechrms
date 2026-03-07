@@ -265,7 +265,17 @@
     </main>
 
     <script>
+        // tableData calculates the FFR % and stats for whatever is currently shown in the table
         const tableData = [{% for row in display_list %}{ id: {{ row.id }}, site: "{{ row.site }}", scope: {{ row.scope }}, p: {{ row.p }}, a: {{ row.a }}, o: {{ row.o }} },{% endfor %}];
+        
+        // indicatorData runs the top cards. It uses all_display_list passed from the backend so all sites show perfectly.
+        const indicatorData = [
+            {% if all_display_list %}
+                {% for row in all_display_list %}{ site: "{{ row.site }}", scope: {{ row.scope }}, p: {{ row.p }} },{% endfor %}
+            {% else %}
+                {% for row in display_list %}{ site: "{{ row.site }}", scope: {{ row.scope }}, p: {{ row.p }} },{% endfor %}
+            {% endif %}
+        ];
 
         function exportExcel() {
             const date = document.getElementById('report_date_picker').value;
@@ -303,7 +313,14 @@
             ["BMM", "JAIRAJ", "MSSSL", "Arjas", "SLR", "AGNI"].forEach(s => {
                 const filter = (s === "AGNI") ? ["AGNI-CCM", "AGNI-IF"] : [s];
                 let ts=0, tp=0, active=false;
-                tableData.filter(r => filter.includes(r.site)).forEach(r => { ts += r.scope; tp += r.p; if(r.p > 0) active=true; });
+                
+                // Uses indicatorData (which contains ALL sites) instead of tableData
+                indicatorData.filter(r => filter.includes(r.site)).forEach(r => { 
+                    ts += r.scope; 
+                    tp += r.p; 
+                    if(r.p > 0) active=true; 
+                });
+                
                 const card = document.createElement('div');
                 card.className = `site-card shadow-sm ${active ? 'uploaded' : ''}`;
                 card.innerHTML = `<p class="text-[10px] font-black text-slate-400 uppercase mb-1">${s}</p>

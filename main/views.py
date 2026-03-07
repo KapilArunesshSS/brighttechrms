@@ -135,11 +135,21 @@ def FFR(request):
             'ffr': e.ff_ratio if e else 0.0,
             'abs_pct': round((e.absent / s.scope * 100), 1) if e and s.scope > 0 else 0.0
         })
+    all_structures = SiteStructure.objects.all()
+    all_display_list = []
+    for s in all_structures:
+        e = entry_map.get(s.id)
+        all_display_list.append({
+            'site': s.site,
+            'scope': s.scope,
+            'p': e.present if e else 0,
+        })
 
     return render(request, 'ffr.html', {
         'selected_site': selected_site,
         'report_date': report_date,
         'display_list': display_list,
+        'all_display_list': all_display_list,
         'is_superuser': is_superuser
     })
 @login_required(login_url='login')
