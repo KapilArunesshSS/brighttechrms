@@ -242,7 +242,10 @@
                             <td class="p-2 text-center text-[11px] font-black text-rose-400" id="abs_{{ row.id }}">{{ row.abs_pct }}%</td>
                             <td class="p-2 text-center"><input type="number" name="w_{{ row.id }}" value="{{ row.w }}" min="0" class="table-input text-slate-500"></td>
                             <td class="p-2 text-center"><input type="number" name="o_{{ row.id }}" value="{{ row.o }}" min="0" oninput="calcRow({{ row.id }}, {{ row.scope }})" class="table-input text-amber-600"></td>
-                            <td class="p-3 text-center font-black text-blue-700 bg-blue-50/30 border-l" id="fr_{{ row.id }}">{{ row.ffr|floatformat:1 }}%</td>
+                            <!-- FEATURE: Percentage Color Logic -->
+                            <td class="p-3 text-center font-black bg-blue-50/30 border-l {% if row.ffr >= 90 %}text-emerald-600{% else %}text-rose-600{% endif %}" id="fr_{{ row.id }}">
+                                {{ row.ffr|floatformat:1 }}%
+                            </td>
                             
                             <td class="p-2"><input type="text" name="rem_{{ row.id }}" value="{{ row.rem }}" placeholder="..." class="w-full px-3 py-2 border border-slate-200 rounded-lg text-[11px] focus:border-blue-500 outline-none bg-slate-50/50"></td>
                         </tr>
