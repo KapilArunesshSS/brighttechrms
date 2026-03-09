@@ -21,7 +21,7 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 # Allow your domain and localhost
 # ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost,.vercel.app").split(",")
-ALLOWED_HOSTS = ['.vercel.app', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 # Application definition
 INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
