@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.db import IntegrityError, transaction
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 import openpyxl 
@@ -40,59 +40,67 @@ EMAIL_SITE_MAP = {
 @login_required(login_url='login')
 def FFR(request):
     """
-    FFR Ledger: Pulls site structure from SiteStructure model.
-    Sends only numeric IDs to the server to prevent OOM errors.
+    FFR Ledger: Handles unified AGNI site and prevents Duplicate Entry errors.
     """
     user = request.user
-    user_email = (user.email or user.username).lower().strip()
+    user_email = (user.email or "").lower().strip()
+    user_name = user.username.lower().strip()
     is_superuser = user.is_superuser
+    
     today = date.today()
     yesterday = today - timedelta(days=1)
     
-    # 1. Capture Date & Site Selection
+    # 1. Site Authorization
+    mapped_site = EMAIL_SITE_MAP.get(user_email) or EMAIL_SITE_MAP.get(user_name)
+    
+    if is_superuser:
+        requested_site = request.GET.get('site_selection') or request.POST.get('site_selection') or 'ALL'
+        selected_site = requested_site
+    else:
+        if not mapped_site:
+            return HttpResponseForbidden(f"Access Denied: User '{user.username}' is not assigned to any site.")
+        selected_site = mapped_site
+
     report_date = request.GET.get('report_date') or request.POST.get('report_date') or str(yesterday)
-    requested_site = request.GET.get('site_selection') or request.POST.get('site_selection') or 'ALL'
 
-    # 2. Site Authorization
-    selected_site = requested_site if is_superuser else EMAIL_SITE_MAP.get(user_email, "NONE")
-
-    # 3. Handle POST (Saving Attendance)
+    # 2. Handle POST (Saving Attendance with Duplicate Cleanup)
     if request.method == 'POST':
+        if selected_site == 'ALL' and not is_superuser:
+            return HttpResponseForbidden("Unauthorized operation.")
+
         present_keys = [k for k in request.POST.keys() if k.startswith('p_')]
-        
         try:
             with transaction.atomic():
                 for p_key in present_keys:
                     struct_id = p_key.split('_')[1]
-                    # Lookup row metadata from DB
                     struct = SiteStructure.objects.get(id=struct_id)
 
                     # Security validation
-                    if not is_superuser:
-                        allowed = EMAIL_SITE_MAP.get(user_email)
-                        if struct.site != allowed:
-                            raise ValueError(f"Unauthorized attempt to submit data for {struct.site} by {user_email}")
+                    if not is_superuser and struct.site != mapped_site:
+                        continue
 
-                    # Safe conversion to handle empty inputs
                     def s_int(v):
                         try: return int(v) if v else 0
                         except: return 0
 
-                    ManpowerEntry.objects.update_or_create(
+                    # CRITICAL FIX: Delete any existing duplicates for this Date/Structure
+                    # This prevents the "returned more than one" error.
+                    ManpowerEntry.objects.filter(date=report_date, structure=struct).delete()
+
+                    # Create fresh record
+                    ManpowerEntry.objects.create(
                         date=report_date,
                         structure=struct,
-                        defaults={
-                            'site': struct.site,
-                            'department': struct.department,
-                            'designation': struct.designation,
-                            'skill_level': struct.skill_level,
-                            'scope': struct.scope,
-                            'present': s_int(request.POST.get(f'p_{struct_id}')),
-                            'absent': s_int(request.POST.get(f'a_{struct_id}')),
-                            'weekly_off': s_int(request.POST.get(f'w_{struct_id}')),
-                            'overtime': s_int(request.POST.get(f'o_{struct_id}')),
-                            'remarks': request.POST.get(f'rem_{struct_id}', '')
-                        }
+                        site=struct.site,
+                        department=struct.department,
+                        designation=struct.designation,
+                        skill_level=struct.skill_level,
+                        scope=struct.scope,
+                        present=s_int(request.POST.get(f'p_{struct_id}')),
+                        absent=s_int(request.POST.get(f'a_{struct_id}')),
+                        weekly_off=s_int(request.POST.get(f'w_{struct_id}')),
+                        overtime=s_int(request.POST.get(f'o_{struct_id}')),
+                        remarks=request.POST.get(f'rem_{struct_id}', '')
                     )
             messages.success(request, f"Records for {selected_site} on {report_date} saved successfully.")
         except Exception as e:
@@ -100,50 +108,38 @@ def FFR(request):
         
         return redirect(f'/FFR/?report_date={report_date}&site_selection={selected_site}')
 
-    # 4. Handle GET (Preparing the Table)
-    # Filter structure based on user selection
+    # 3. Handle GET (Fetching Data)
     if selected_site == "ALL":
-        structure_qs = SiteStructure.objects.all()
+        structure_qs = SiteStructure.objects.all().order_by('sr_no')
     else:
-        structure_qs = SiteStructure.objects.filter(site=selected_site)
+        structure_qs = SiteStructure.objects.filter(site=selected_site).order_by('sr_no')
 
-    # Fetch daily entries and map them to the structure
     daily_entries = ManpowerEntry.objects.filter(date=report_date).select_related('structure')
     entry_map = {e.structure_id: e for e in daily_entries if e.structure_id}
 
-    # Build optimized display list
     display_list = []
     for s in structure_qs:
         e = entry_map.get(s.id)
         display_list.append({
-            'id': s.id,
-            'sr_no': s.sr_no,
-            'site': s.site,
-            'dept': s.department,
-            'desig': s.designation,
-            'skill': s.skill_level,
-            'scope': s.scope,
-            'p': e.present if e else 0,
-            'a': e.absent if e else 0,
-            'w': e.weekly_off if e else 0,
-            'o': e.overtime if e else 0,
+            'id': s.id, 'sr_no': s.sr_no, 'site': s.site, 'dept': s.department,
+            'desig': s.designation, 'skill': s.skill_level, 'scope': s.scope,
+            'p': e.present if e else 0, 'a': e.absent if e else 0,
+            'w': e.weekly_off if e else 0, 'o': e.overtime if e else 0,
             'rem': e.remarks if e else '',
-            'ffr': e.ff_ratio if e else 0.0,
+            'ffr': (e.present / s.scope * 100) if e and s.scope > 0 else 0.0,
             'abs_pct': round((e.absent / s.scope * 100), 1) if e and s.scope > 0 else 0.0
         })
-    all_structures = SiteStructure.objects.all()
+
+    # Site indicator card data (Unified AGNI)
     all_display_list = []
-    for s in all_structures:
+    for s in SiteStructure.objects.all():
         e = entry_map.get(s.id)
-        all_display_list.append({
-            'site': s.site,
-            'scope': s.scope,
-            'p': e.present if e else 0,
-        })
+        all_display_list.append({'site': s.site, 'scope': s.scope, 'p': e.present if e else 0})
 
     return render(request, 'ffr.html', {
         'selected_site': selected_site,
         'report_date': report_date,
+        'current_date': today.strftime('%Y-%m-%d'),
         'display_list': display_list,
         'all_display_list': all_display_list,
         'is_superuser': is_superuser
