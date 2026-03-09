@@ -5,162 +5,119 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>brighttech.rms | Dashboard</title>
-    <!-- Tailwind CSS for styling -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons for UI icons -->
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Great+Vibes&display=swap" rel="stylesheet">
     <style>
-        /* ... existing styles ... */
-        /* Custom scrollbar for a cleaner look (optional) */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #94a3b8;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #475569;
-        }
-        .sidebar-collapsed {
-            width: 5rem !important;
-            transition: width 0.3s ease-in-out;
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Sidebar Transitions */
+        .sidebar-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        .sidebar-collapsed { width: 5rem !important; }
+        .sidebar-expanded { width: 17rem !important; }
+        .sidebar-collapsed .sidebar-text { display: none; }
+        .sidebar-collapsed ul li a { justify-content: center; padding-left: 0; padding-right: 0; }
+        .sidebar-collapsed .sidebar-content-block { display: none; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f8fafc; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Table Sticky Header Shadow */
+        #employeeTable thead th {
+            box-shadow: 0 1px 0 0 #e2e8f0;
         }
 
-        .sidebar-expanded {
-            width: 16rem !important;
-            transition: width 0.3s ease-in-out;
+        .elegant-script-text {
+            font-family: 'Great Vibes', cursive;
+            font-size: 28px; 
+            color: #4f46e5;
         }
 
-        .sidebar-collapsed .sidebar-text {
-            display: none;
-        }
-
-        .sidebar-collapsed ul li a {
-            justify-content: center;
-        }
-
+        /* Tooltip refinement */
         .sidebar-tooltip {
             position: absolute;
-            left: 5rem;
+            left: 5.5rem;
             background: #1e293b;
             color: white;
-            padding: 4px 8px;
+            padding: 5px 10px;
             border-radius: 6px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             opacity: 0;
-            transform: translateY(-50%);
-            transition: opacity 0.2s ease;
             pointer-events: none;
             white-space: nowrap;
-            z-index: 50;
+            z-index: 100;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
         }
+        .sidebar-collapsed li a:hover .sidebar-tooltip { opacity: 1; }
 
-        .sidebar-collapsed ul li a:hover .sidebar-tooltip {
-            opacity: 1;
-        }
-
-        .sidebar-collapsed #toggleSidebar {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-        }
-        
-        .sidebar-expanded #toggleSidebar {
-            position: static;
-            transform: none;
-        }
-        
-        /* Styles specific to the summary table */
-        .summary-table th, .summary-table td {
-            white-space: nowrap;
-        }
-        
-        .sidebar-content-block input[type="date"],
-        .sidebar-content-block select {
-            color: #000; /* Ensures text is black on white background */
-        }
-        .elegant-script-text {
-            font-family: 'Great Vibes', cursive; /* You might need to import this font */
-            font-size: 30px; 
-            color:rgb(123, 144, 235); 
-            text-align: center;
-            padding: 20px;
-        }
+        /* Status Badge specific widths */
+        .status-badge { min-width: 90px; justify-content: center; }
     </style>
     <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
 </head>
-<body class="bg-amber-50">
+<body class="bg-slate-50 text-slate-900">
 
-    <div class="min-h-screen ">
-        <!-- 
-          CHANGE 1: Sidebar default state 
-          - Changed 'sidebar-expanded' to 'sidebar-collapsed'
-          - This makes the "collapsed" 5rem sidebar the default, which is much better for mobile.
-          - The user's JS will still work to expand/collapse it.
-        -->
-        <aside id="sidebar" class="fixed top-0 left-0 h-screen flex flex-col text-gray-200 shadow-2xl z-40 sidebar-collapsed sidebar-transition"  
-       style="background-color: #3D4A55;">
-            <div class="h-16 flex items-center justify-between border-b border-slate-700 px-4 relative">
-                <h1 class="text-xl font-bold text-white sidebar-text">Dashboard</h1>
-                <button id="toggleSidebar" 
-                    class="flex items-center justify-center text-white hover:text-blue-400 focus:outline-none transition-all duration-300">
-                    <i data-lucide="menu" class="w-6 h-6"></i>
+    <div class="min-h-screen flex">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed top-0 left-0 h-screen flex flex-col text-slate-300 shadow-2xl z-50 sidebar-collapsed sidebar-transition"  
+               style="background-color: #0f172a;">
+            
+            <div class="h-16 flex items-center justify-between border-b border-slate-800 px-5 relative">
+                <h1 class="text-lg font-extrabold text-white sidebar-text tracking-tight uppercase">RMS</h1>
+                <button id="toggleSidebar" class="p-2 rounded-lg hover:bg-slate-800 text-white transition-colors">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
                 </button>
             </div>            
-            <!-- ... existing sidebar nav ... -->
-            <nav class="flex-grow overflow-y-auto custom-scrollbar overflow-x-hidden">
-                <ul class="py-4">
+
+            <nav class="flex-grow overflow-y-auto overflow-x-hidden">
+                <ul class="py-6 space-y-2">
                     {% if user.is_superuser or not user.is_staff %}
-                    <li class="px-4 mt-2">
-                        <a href="{% url 'add_employee' %}" class="flex items-center gap-2 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition duration-300">
-                            <i data-lucide="plus" class="w-5 h-5"></i>
+                    <li class="px-4">
+                        <a href="{% url 'add_employee' %}" class="relative flex items-center gap-3 bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:bg-blue-700 transition duration-300 group">
+                            <i data-lucide="plus-circle" class="w-5 h-5 shrink-0"></i>
                             <span class="sidebar-text">Add Employee</span>
                             <span class="sidebar-tooltip">Add Employee</span>
                         </a>
                     </li>
                     
-                    <!-- "Export to Excel" is now outside the if block and visible to all users -->
-                    <li class= "px-4 mt-2">
-                        <a href="{% url 'export_excel' %}" class="flex items-center gap-2 bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 transition duration-300">
-                            <i data-lucide="sheet" class="w-5 h-5"></i>
-                            <span class="sidebar-text">Export to Excel</span> 
-                            <span class="sidebar-tooltip">Export to Excel</span>
+                    <li class= "px-4">
+                        <a href="{% url 'export_excel' %}" class="relative flex items-center gap-3 bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:bg-emerald-700 transition duration-300 group">
+                            <i data-lucide="file-spreadsheet" class="w-5 h-5 shrink-0"></i>
+                            <span class="sidebar-text">Export Excel</span> 
+                            <span class="sidebar-tooltip">Export Excel</span>
                         </a>
                     </li> 
                     {% endif %}
-                    <li class= "px-4 mt-2">
-                        <a href="{% url 'FFR' %}" class="flex items-center gap-2 bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-700 transition duration-300">
-                            <i data-lucide="file-text" class="w-5 h-5"></i>
-                            <span class="sidebar-text">FFR</span> 
+                    <li class= "px-4">
+                        <a href="{% url 'FFR' %}" class="relative flex items-center gap-3 bg-rose-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:bg-rose-700 transition duration-300 group">
+                            <i data-lucide="file-text" class="w-5 h-5 shrink-0"></i>
+                            <span class="sidebar-text">FFR Ledger</span> 
                             <span class="sidebar-tooltip">FFR</span>
                         </a>
                     </li>
-
                 </ul>
 
-                <!-- --- SITE PIPELINE SUMMARY TABLE IN ASIDE SECTION --- -->
-                <div class="p-3 mt-3 border-t border-slate-700 sidebar-content-block">
-                    <h3 class="text-sm font-semibold text-white mb-2 sidebar-text"> Monthly Summary </h3>
+                <!-- Monthly Summary Sidebar Module -->
+                <div class="p-4 mt-4 border-t border-slate-800 sidebar-content-block">
+                    <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Pipeline Analysis</h3>
                     
-                    <!-- DATE PICKER SECTION -->
-                    <div class="space-y-2 mb-4 sidebar-text">
+                    <div class="space-y-3 mb-6">
                         <div>
-                            <label for="fromDate" class="block text-xs font-medium text-slate-400">From Date</label>
-                            <input type="date" id="fromDate" class="mt-1 w-full p-1.5 text-xs text-slate-900 rounded bg-white focus:ring-blue-500 focus:border-blue-500">
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Date Range</label>
+                            <div class="grid grid-cols-1 gap-2">
+                                <input type="date" id="fromDate" class="w-full p-2 text-xs text-white rounded-lg border border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-900">
+                                <input type="date" id="toDate" class="w-full p-2 text-xs text-white rounded-lg border border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-900">
+                            </div>
                         </div>
                         <div>
-                            <label for="toDate" class="block text-xs font-medium text-slate-400">To Date</label>
-                            <input type="date" id="toDate" class="mt-1 w-full p-1.5 text-xs text-slate-900 rounded bg-white focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label for='company' class="block text-xs font-medium text-slate-400">Site</label>
-                            <select id="company" name="company" required class="mt-1 w-full p-1.5 text-xs text-slate-900 rounded bg-white focus:ring-blue-500 focus:border-blue-500">
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Site</label>
+                            <select id="company" class="w-full p-2 text-xs text-white rounded-lg border border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-900">
                                 <option value="BMM">BMM</option>
                                 <option value="SLR">SLR</option>
                                 <option value="ARJAS">ARJAS</option>
@@ -171,302 +128,244 @@
                                 <option value="CD TECH">CD TECH</option>
                             </select>
                         </div>
-                        <div>
-                            <button id="filterButton" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition duration-300">
-                                Apply Filters
-                            </button>
-                        </div>
-
+                        <button id="filterButton" class="w-full bg-slate-700 text-white text-xs font-bold py-2.5 rounded-lg hover:bg-slate-600 transition shadow-md flex items-center justify-center gap-2">
+                            <i data-lucide="filter" class="w-3 h-3"></i> Apply Filter
+                        </button>
                     </div>
-                    <!-- END DATE PICKER SECTION -->
 
-                    <div class="bg-slate-700 rounded-lg shadow-inner overflow-hidden sidebar-text">
-                        <table id="summaryMatrix" class="summary-table w-full text-xs text-white">
-                            <thead class="bg-slate-600">
+                    <div class="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
+                        <table id="summaryMatrix" class="summary-table w-full text-[11px]">
+                            <thead class="bg-slate-800/50">
                                 <tr>
-                                    <th class="py-2 px-1 text-left font-medium">STAT</th>
-                                    <th class="py-2 px-1 font-medium">SITE</th> <!-- Header will be updated by JS -->
+                                    <th class="py-2.5 px-3 text-left font-bold text-slate-500">METRIC</th>
+                                    <th class="py-2.5 px-3 text-right font-bold text-slate-500">QTY</th>
                                 </tr>
                             </thead>
-                            <!-- MODIFIED: Added data-status and cursor-pointer to rows -->
-                            <tbody class="divide-y divide-slate-700">
-                                <tr class="hover:bg-slate-500 cursor-pointer" data-status="selected">
-                                    <td class="py-2 px-1 text-left">SELECTED</td>
-                                    <td class="py-2 px-1 text-center font-bold text-blue-300">0</td>
+                            <tbody class="divide-y divide-slate-800">
+                                <tr class="hover:bg-blue-500/10 cursor-pointer transition-colors" data-status="selected">
+                                    <td class="py-2.5 px-3 text-slate-400">SELECTED</td>
+                                    <td class="py-2.5 px-3 text-right font-black text-blue-400">0</td>
                                 </tr>
-                                <tr class="hover:bg-slate-500 cursor-pointer" data-status="offered">
-                                    <td class="py-2 px-1 text-left">OFFERED</td>
-                                    <td class="py-2 px-1 text-center font-bold text-blue-300">0</td>
+                                <tr class="hover:bg-blue-500/10 cursor-pointer transition-colors" data-status="offered">
+                                    <td class="py-2.5 px-3 text-slate-400">OFFERED</td>
+                                    <td class="py-2.5 px-3 text-right font-black text-blue-400">0</td>
                                 </tr>
-                                <tr class="hover:bg-slate-500 cursor-pointer" data-status="rejected">
-                                    <td class="py-2 px-1 text-left">REJECTED</td>
-                                    <td class="py-2 px-1 text-center font-bold text-blue-300">0</td>
+                                <tr class="hover:bg-blue-500/10 cursor-pointer transition-colors" data-status="rejected">
+                                    <td class="py-2.5 px-3 text-slate-400">REJECTED</td>
+                                    <td class="py-2.5 px-3 text-right font-black text-rose-400">0</td>
                                 </tr>
-                                <tr class="hover:bg-slate-500 cursor-pointer" data-status="joined">
-                                    <td class="py-2 px-1 text-left">JOINED</td>
-                                    <td class="py-2 px-1 text-center font-bold text-blue-300">0</td>
+                                <tr class="hover:bg-blue-500/10 cursor-pointer transition-colors" data-status="joined">
+                                    <td class="py-2.5 px-3 text-slate-400">JOINED</td>
+                                    <td class="py-2.5 px-3 text-right font-black text-blue-400">0</td>
                                 </tr>
-                                <tr class="hover:bg-slate-500 cursor-pointer" data-status="pending">
-                                    <td class="py-2 px-1 text-left">PENDING</td>
-                                    <td class="py-2 px-1 text-center font-bold text-blue-300">0</td>
+                                <tr class="hover:bg-blue-500/10 cursor-pointer transition-colors" data-status="pending">
+                                    <td class="py-2.5 px-3 text-slate-400">PENDING</td>
+                                    <td class="py-2.5 px-3 text-right font-black text-amber-400">0</td>
                                 </tr>
-                                <tr class="hover:bg-slate-500 cursor-pointer" data-status="left">
-                                    <td class="py-2 px-1 text-left">LEFT</td>
-                                    <td class="py-2 px-1 text-center font-bold text-blue-300">0</td>
+                                <tr class="hover:bg-blue-500/10 cursor-pointer transition-colors" data-status="left">
+                                    <td class="py-2.5 px-3 text-slate-400">LEFT</td>
+                                    <td class="py-2.5 px-3 text-right font-black text-slate-400">0</td>
                                 </tr>
-                                <tr class="bg-slate-600 font-extrabold hover:bg-slate-500 cursor-pointer" data-status="total">
-                                    <td class="py-2 px-1 text-left">TOTAL</td>
-                                    <td class="py-2 px-1 text-center text-sm text-green-400">0</td>
+                                <tr class="bg-blue-600/10 font-bold" data-status="total">
+                                    <td class="py-2.5 px-3 text-blue-100">TOTAL</td>
+                                    <td class="py-2.5 px-3 text-right text-sm text-emerald-400 font-black">0</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    <div id="loadingIndicator" class="text-center mt-2 text-blue-300 text-xs hidden">
-                        Filtering...
-                    </div> 
+                    <div id="loadingIndicator" class="text-center mt-3 text-blue-400 text-[10px] animate-pulse hidden">Processing Data...</div> 
                 </div>
             </nav>
-            {% comment %} <div class="p-4 border-t border-slate-700">
-                <div class="flex items-center gap-3">
-                    
-                    <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-                        <img src="{% static 'images/logo.png' %}" alt="User Avatar" class="h-8 w-8">
-                    </div>
-            
-                    <div class="sidebar-text">
-                        <p class="font-semibold text-white">Administration</p>
-                    </div>
-                </div>
-            </div> {% endcomment %}
         </aside>
 
-        <!-- Main Content -->
-        <!-- 
-          CHANGE 2: Main Content margin and padding
-          - Changed 'ml-64' to 'ml-20' to match the new default collapsed sidebar.
-          - Changed 'p-8' to 'p-4 lg:p-8' (less padding on mobile, same on desktop).
-        -->
-        <main id="mainContent" class="ml-20 p-4 lg:p-8 bg-gray-100 text-gray-900 transition-all duration-300 ease-in-out">
+        <!-- Main Content Area -->
+        <main id="mainContent" class="ml-20 flex-grow p-4 lg:p-8 transition-all duration-300">
 
-            <!-- Header -->
-            <!-- This header is already responsive with 'flex-col md:flex-row', which is great! -->
-            <header class="flex flex-col lg:flex-row justify-between items-center mb-8 gap-6 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex items-center gap-4">
-                    <img src="{% static 'images/logo.png' %}" alt="Logo" class="h-12 md:h-16 w-auto">
-                    <div class="text-slate-900 font-black leading-tight text-lg md:text-xl">
+            <!-- Branding Header -->
+            <header class="flex flex-col lg:flex-row justify-between items-center mb-8 gap-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center gap-5">
+                    <div class="p-2 bg-blue-50 rounded-2xl">
+                        <img src="{% static 'images/logo.png' %}" alt="Logo" class="h-12 md:h-14 w-auto">
+                    </div>
+                    <div class="text-slate-900 font-black leading-tight text-xl md:text-2xl tracking-tighter">
                         <span>Bright Tech Industrials</span><br>
-                        <span class="text-blue-600">India Pvt Ltd</span>
+                        <span class="text-blue-600 text-lg md:text-xl">India Pvt Ltd</span>
                     </div>
                 </div>
                 
-                <div class="elegant-script-text italic">
-                    "Rise Above The Rest"
+                <div class="elegant-script-text">
+                    Rise Above The Rest
                 </div>
                 
                 <div class="flex items-center gap-3">
-                    <a href="{% url 'logout' %}" class="flex items-center gap-2 bg-slate-900 text-white font-bold py-2.5 px-6 rounded-xl shadow-md hover:bg-black transition-all">
-                        <i data-lucide="log-out" class="w-4 h-4"></i>
-                        <span>Logout</span>
+                    <a href="{% url 'logout' %}" class="flex items-center gap-2 bg-slate-900 text-white font-black py-3 px-8 rounded-xl shadow-lg hover:bg-black transition-all transform active:scale-95">
+                        <i data-lucide="log-out" class="w-4 h-4 text-blue-400"></i>
+                        <span class="text-sm">Logout</span>
                     </a>
                 </div>
             </header>
             
-            <!-- 
-              CHANGE 3: Responsive grid for Status Cards
-              - Added 'sm:grid-cols-2', 'md:grid-cols-3', 'lg:grid-cols-4', 'xl:grid-cols-7'
-              - This makes the cards stack nicely on all screen sizes, from 1 column on
-                phones, to 2, 3, 4, and finally 7 on very large screens.
-            -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-6 mb-8">
-                <!-- Total Employees -->
-                <div class="bg-white p-6 rounded-xl shadow-lg flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Total</p>
-                        <p class="text-3xl font-bold text-slate-800">{{ total_employees }}</p>
-                    </div>
-                    <div class="bg-blue-100 p-3 rounded-full">
-                        <i data-lucide="users" class="w-6 h-6 text-blue-600"></i>
+            <!-- Global Stats Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-5 mb-10">
+                <!-- Card Component -->
+                {% with card_style="bg-white p-5 rounded-2xl shadow-sm border-t-4 flex flex-col justify-between h-32 hover:shadow-md transition-shadow" %}
+                <div class="{{ card_style }} border-blue-500">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Database</p>
+                    <div class="flex items-end justify-between">
+                        <p class="text-3xl font-black text-slate-800">{{ total_employees }}</p>
+                        <i data-lucide="users" class="w-5 h-5 text-blue-500 mb-1"></i>
                     </div>
                 </div>
-                <!-- Joined -->
-                <div class="bg-white p-6 rounded-xl shadow-lg flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Joined</p>
-                        <p class="text-3xl font-bold text-slate-800">{{ joined_count }}</p>
-                    </div>
-                    <div class="bg-purple-100 p-3 rounded-full">
-                        <i data-lucide="user-check" class="w-6 h-6 text-purple-600"></i>
+                <div class="{{ card_style }} border-purple-500">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Joined Team</p>
+                    <div class="flex items-end justify-between">
+                        <p class="text-3xl font-black text-slate-800">{{ joined_count }}</p>
+                        <i data-lucide="user-plus" class="w-5 h-5 text-purple-500 mb-1"></i>
                     </div>
                 </div>
-                <!-- Offered -->
-                <div class="bg-white p-6 rounded-xl shadow-lg flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Offered</p>
-                        <p class="text-3xl font-bold text-slate-800">{{ offered_count }}</p>
-                    </div>
-                    <div class="bg-indigo-100 p-3 rounded-full">
-                        <i data-lucide="award" class="w-6 h-6 text-indigo-600"></i>
+                <div class="{{ card_style }} border-indigo-500">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Offers Issued</p>
+                    <div class="flex items-end justify-between">
+                        <p class="text-3xl font-black text-slate-800">{{ offered_count }}</p>
+                        <i data-lucide="mail-check" class="w-5 h-5 text-indigo-500 mb-1"></i>
                     </div>
                 </div>
-                 <!-- Selected -->
-                <div class="bg-white p-6 rounded-xl shadow-lg flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Selected</p>
-                        <p class="text-3xl font-bold text-slate-800">{{ selected_count }}</p>
-                    </div>
-                    <div class="bg-green-100 p-3 rounded-full">
-                        <i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>
+                <div class="{{ card_style }} border-emerald-500">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Shortlisted</p>
+                    <div class="flex items-end justify-between">
+                        <p class="text-3xl font-black text-slate-800">{{ selected_count }}</p>
+                        <i data-lucide="award" class="w-5 h-5 text-emerald-500 mb-1"></i>
                     </div>
                 </div>
-                <!-- Pending -->
-                <div class="bg-white p-6 rounded-xl shadow-lg flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Pending</p>
-                        <p class="text-3xl font-bold text-slate-800">{{ pending_count }}</p>
-                    </div>
-                    <div class="bg-yellow-100 p-3 rounded-full">
-                        <i data-lucide="clock" class="w-6 h-6 text-yellow-600"></i>
+                <div class="{{ card_style }} border-amber-500">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Review</p>
+                    <div class="flex items-end justify-between">
+                        <p class="text-3xl font-black text-slate-800">{{ pending_count }}</p>
+                        <i data-lucide="timer" class="w-5 h-5 text-amber-500 mb-1"></i>
                     </div>
                 </div>
-                <!-- Rejected -->
-                <div class="bg-white p-6 rounded-xl shadow-lg flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Rejected</p>
-                        <p class="text-3xl font-bold text-slate-800">{{ rejected_count }}</p>
-                    </div>
-                    <div class="bg-red-100 p-3 rounded-full">
-                        <i data-lucide="x-circle" class="w-6 h-6 text-red-600"></i>
+                <div class="{{ card_style }} border-rose-500">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Declined</p>
+                    <div class="flex items-end justify-between">
+                        <p class="text-3xl font-black text-slate-800">{{ rejected_count }}</p>
+                        <i data-lucide="user-x" class="w-5 h-5 text-rose-500 mb-1"></i>
                     </div>
                 </div>
-                <!-- Left-->
-                <div class="bg-white p-6 rounded-xl shadow-lg flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Left</p>
-                        <p class="text-3xl font-bold text-slate-800">{{ left_count }}</p>
-                    </div>
-                    <div class="bg-gray-100 p-3 rounded-full">
-                        <i data-lucide="log-out" class="w-6 h-6 text-gray-600"></i>
+                <div class="{{ card_style }} border-slate-400">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resigned</p>
+                    <div class="flex items-end justify-between">
+                        <p class="text-3xl font-black text-slate-800">{{ left_count }}</p>
+                        <i data-lucide="door-open" class="w-5 h-5 text-slate-400 mb-1"></i>
                     </div>
                 </div>
+                {% endwith %}
             </div>
 
-            <!-- Django Messages Framework (if any) -->
+            <!-- Messages -->
             {% if messages %}
-            <div class="mb-6 space-y-2">
+            <div class="mb-8 space-y-3">
                 {% for message in messages %}
-                <div class="p-4 rounded-lg {% if message.tags == 'success' %} bg-green-100 text-green-800 {% else %} bg-red-100 text-red-800 {% endif %}" role="alert">
-                    {{ message }}
+                <div class="flex items-center gap-3 p-4 rounded-xl border {% if message.tags == 'success' %} bg-emerald-50 border-emerald-200 text-emerald-800 {% else %} bg-rose-50 border-rose-200 text-rose-800 {% endif %}" role="alert">
+                    <i data-lucide="{% if message.tags == 'success' %}check-circle{% else %}alert-circle{% endif %}" class="w-5 h-5"></i>
+                    <span class="font-semibold text-sm">{{ message }}</span>
                 </div>
                 {% endfor %}
             </div>
             {% endif %}
 
-            <!-- Employee List Table -->
-            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div class="p-6 border-b">
-                    <h3 class="text-xl font-semibold text-slate-800">Recruiting Database</h3>
+            <!-- Table Section -->
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b flex justify-between items-center bg-slate-50/50">
+                    <h3 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
+                        <i data-lucide="database" class="w-5 h-5 text-blue-600"></i>
+                        Recruitment Database
+                    </h3>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">
+                        Live Record View
+                    </div>
                 </div>
-                <!-- This overflow-x-auto is perfect! It will make the table scroll horizontally on mobile -->
-                <div class="overflow-x-auto overflow-y-auto h-[60vh]">
-                    <table id="employeeTable" class="w-full">
-                        <thead class="bg-blue-100 text-black-500 sticky top-0 ">
+                
+                <div class="overflow-x-auto overflow-y-auto h-[60vh] relative">
+                    <table id="employeeTable" class="w-full border-collapse">
+                        <thead class="sticky top-0 z-10 bg-[#0f172a] text-white">
                             <tr>
-                                <!-- CHANGE 4: Hide less important columns on small screens -->
-                                <th class="text-left font-semibold p-4 hidden md:table-cell">REF_ID</th>
-                                <th class="text-left font-semibold p-4 hidden lg:table-cell">CREATED</th>
-                                <th class="text-left font-semibold p-4 text-center">NAME</th>
-                                <th class="text-left font-semibold p-4">CONTACT</th>
-                                <th class="text-left font-semibold p-4">DESIGNATION</th>
-                                <th class="text-left font-semibold p-4">SITE</th>
-                                <th class="text-left font-semibold p-4">STATUS</th>
-                                <th class="text-left font-semibold p-4 hidden lg:table-cell">UPDATED</th>
-                                <th class="text-left font-semibold p-4">RESUME</th>
-                                <th class="text-left font-semibold p-4">ACTIONS</th>
+                                <th class="text-left p-5 text-[10px] font-black uppercase tracking-widest hidden md:table-cell">REF_ID</th>
+                                <th class="text-left p-5 text-[10px] font-black uppercase tracking-widest hidden lg:table-cell">Date</th>
+                                <th class="text-center p-5 text-[10px] font-black uppercase tracking-widest">Candidate</th>
+                                <th class="text-left p-5 text-[10px] font-black uppercase tracking-widest">Contact</th>
+                                <th class="text-left p-5 text-[10px] font-black uppercase tracking-widest">Position</th>
+                                <th class="text-left p-5 text-[10px] font-black uppercase tracking-widest">Site</th>
+                                <th class="text-left p-5 text-[10px] font-black uppercase tracking-widest">Current Status</th>
+                                <th class="text-left p-5 text-[10px] font-black uppercase tracking-widest hidden lg:table-cell">Updated</th>
+                                <th class="text-left p-5 text-[10px] font-black uppercase tracking-widest">Resume</th>
+                                <th class="text-center p-5 text-[10px] font-black uppercase tracking-widest">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            <!-- Initial data is loaded by Django -->
-                            <!-- MODIFICATION: Added data- attributes to the <tr> tag -->
+                        <tbody class="divide-y divide-slate-100 bg-white">
                             {% for employee in employees %}
-                            <!-- 
-                              MODIFICATION 1: 
-                              Added data-offer-letter-url and data-remarks to the <tr>.
-                              These will be read by JavaScript when a badge is clicked.
-                            -->
-                            <tr class="hover:bg-slate-50 transition-colors"
+                            <tr class="hover:bg-blue-50/30 transition-colors group"
                                 data-created-date="{{ employee.created_at|date:'Y-m-d' }}"
                                 data-site="{{ employee.company }}"
                                 data-status="{{ employee.status|lower }}"
                                 {% if employee.offer_letter %}data-offer-letter-url="{{ employee.offer_letter.url }}"{% endif %}
                                 {% if employee.remarks %}data-remarks="{{ employee.remarks|escapejs }}"{% endif %}>
-                                <!-- CHANGE 4: Hide corresponding cells -->
-                                <td class="p-4 text-slate-600 font-mono hidden md:table-cell">{{ employee.ref_id }}</td>
-                                <td class="p-4 text-slate-600 hidden lg:table-cell">{{ employee.created_at|date:"M. d, Y" }}</td>
-                                <td class="p-4 flex items-center gap-3">
-                                    {% comment %} <img src="https://placehold.co/40x40/E2E8F0/475569?text={{ employee.name.0 }}" alt="Avatar" class="w-10 h-10 rounded-full object-cover"> {% endcomment %}
-                                    <div class="min-w-32 text-center">
-                                        <p class=" font-semibold text-slate-800">{{ employee.name }}</p>
-                                        <p class=" text-sm text-slate-500">Age: {{ employee.age }}</p>
+                                
+                                <td class="p-5 text-xs text-slate-500 font-mono hidden md:table-cell">{{ employee.ref_id }}</td>
+                                <td class="p-5 text-xs text-slate-600 hidden lg:table-cell font-bold">{{ employee.created_at|date:"M d, Y" }}</td>
+                                <td class="p-5">
+                                    <div class="min-w-[150px] text-center">
+                                        <p class="font-extrabold text-slate-900">{{ employee.name }}</p>
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Age: {{ employee.age }}</p>
                                     </div>
                                 </td>
-                                <td class="p-4 text-slate-600">{{ employee.contact_number }}</td>
-
-                                <td class="p-4 text-slate-600">{{ employee.role }}</td>
-                                <td class="p-4 text-slate-600">{{employee.company }}</td>
-                                <td class="p-4">
-                                    <!-- Status Badges -->
+                                <td class="p-5 text-sm font-semibold text-slate-600">{{ employee.contact_number }}</td>
+                                <td class="p-5 text-sm font-bold text-blue-600">{{ employee.role }}</td>
+                                <td class="p-5 text-sm font-black text-slate-800">{{ employee.company }}</td>
+                                <td class="p-5">
                                     {% if employee.status|lower == 'selected' %}
-                                        <span class="inline-flex items-center gap-1.5 bg-green-100 text-green-700 text-xs font-medium px-2.5 py-1 rounded-full">
-                                            <span class="w-2 h-2 bg-green-500 rounded-full"></span> Selected
+                                        <span class="status-badge inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-1.5 rounded-full border border-emerald-100">
+                                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> SELECTED
                                         </span>
                                     {% elif employee.status|lower == 'joined' %}
-                                        <span class="inline-flex items-center gap-1.5 bg-purple-100 text-purple-700 text-xs font-medium px-2.5 py-1 rounded-full">
-                                            <span class="w-2 h-2 bg-purple-500 rounded-full"></span> Joined
+                                        <span class="status-badge inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-[10px] font-black px-3 py-1.5 rounded-full border border-indigo-100">
+                                            <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span> JOINED
                                         </span>
                                     {% elif employee.status|lower == 'offered' %}
-                                        <!-- MODIFICATION 2: Added 'status-badge' class, 'cursor-pointer', and 'data-status-type' -->
-                                        <span class="inline-flex items-center gap-1.5 bg-blue-100 text-blue-700 text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer status-badge" data-status-type="offered">
-                                            <span class="w-2 h-2 bg-blue-500 rounded-full"></span> Offered
+                                        <span class="status-badge inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-[10px] font-black px-3 py-1.5 rounded-full border border-blue-100 cursor-pointer status-badge hover:bg-blue-100 transition-colors" data-status-type="offered">
+                                            <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> OFFERED
                                         </span>
                                     {% elif employee.status|lower == 'pending' %}
-                                         <span class="inline-flex items-center gap-1.5 bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-1 rounded-full">
-                                            <span class="w-2 h-2 bg-yellow-500 rounded-full"></span> Pending
+                                         <span class="status-badge inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 text-[10px] font-black px-3 py-1.5 rounded-full border border-amber-100">
+                                            <span class="w-1.5 h-1.5 bg-amber-500 rounded-full"></span> PENDING
                                         </span>
                                     {% elif employee.status|lower == 'rejected' %}
-                                         <!-- MODIFICATION 2: Added 'status-badge' class, 'cursor-pointer', and 'data-status-type' -->
-                                         <span class="inline-flex items-center gap-1.5 bg-red-100 text-red-700 text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer status-badge" data-status-type="rejected">
-                                            <span class="w-2 h-2 bg-red-500 rounded-full"></span> Rejected
+                                         <span class="status-badge inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 text-[10px] font-black px-3 py-1.5 rounded-full border border-rose-100 cursor-pointer status-badge hover:bg-rose-100 transition-colors" data-status-type="rejected">
+                                            <span class="w-1.5 h-1.5 bg-rose-500 rounded-full"></span> REJECTED
                                         </span>
                                     {% elif employee.status|lower == 'left' %}
-                                         <span class="inline-flex items-center gap-1.5 bg-slate-200 text-slate-700 text-xs font-medium px-2.5 py-1 rounded-full">
-                                            <span class="w-2 h-2 bg-slate-500 rounded-full"></span> Left
+                                         <span class="status-badge inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 text-[10px] font-black px-3 py-1.5 rounded-full border border-slate-200">
+                                            <span class="w-1.5 h-1.5 bg-slate-400 rounded-full"></span> LEFT
                                         </span>
                                     {% endif %}
                                 </td>
-                                <!-- CHANGE 4: Hide corresponding cell -->
-                                <td class="p-4 text-slate-600 hidden lg:table-cell">{{ employee.updated_at|date:"M. d, Y" }}</td>
-                                <td class="p-4">
+                                <td class="p-5 text-xs text-slate-500 hidden lg:table-cell">{{ employee.updated_at|date:"M d, Y" }}</td>
+                                <td class="p-5">
                                      {% if employee.resume %}
-                                     <a href="{{ employee.resume.url }}" target="_blank" class="text-blue-600 hover:underline">
+                                     <a href="{{ employee.resume.url }}" target="_blank" class="p-2 px-4 bg-slate-100 rounded-lg text-blue-600 font-black text-[10px] uppercase hover:bg-blue-600 hover:text-white transition-all shadow-sm">
                                         View
                                     </a>
                                     {% else %}
-                                    <span class="text-slate-400">No File</span>
+                                    <span class="text-slate-300 text-[10px] font-bold uppercase italic">Missing</span>
                                     {% endif %}
                                 </td>
-                                <td class="p-4">
-                                    <div class="flex gap-2">
-                                        <!-- MODIFICATION: All users can edit -->
-                                        <a href="{% url 'edit_employee' employee.id %}" class="p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors"><i data-lucide="edit-2" class="w-4 h-4"></i></a>
-                                        
-                                        <!-- MODIFICATION: Only superusers can delete -->
+                                <td class="p-5">
+                                    <div class="flex justify-center gap-3">
+                                        <a href="{% url 'edit_employee' employee.id %}" class="p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all"><i data-lucide="edit-3" class="w-4 h-4"></i></a>
                                         {% if user.is_superuser %}
                                             <form action="{% url 'delete_employee' employee.id %}" method="post" class="inline">
                                                 {% csrf_token %}
-                                                <button typeid="submit" 
-                                                        onclick="return confirm('Are you sure you want to delete this?');" 
-                                                        class="p-2 text-slate-500 hover:bg-slate-200 hover:text-red-600 rounded-full transition-colors">
-                                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                <button type="submit" onclick="return confirm('Confirm deletion of this record?');" class="p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-all">
+                                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
                                                 </button>
                                             </form>
                                         {% endif %}
@@ -474,61 +373,48 @@
                                 </td>
                             </tr>
                             {% empty %}
-                            <!-- MODIFICATION: Added id="noEmployeesMessage" -->
                             <tr id="noEmployeesMessage">
-                                <td colspan="10" class="text-center p-10 text-slate-500">
-                                    <p>No employees found.</p>
-                                    <!-- MODIFICATION: Changed text based on permissions -->
-                                    {% if user.is_superuser %}
-                                    <p class="mt-2 text-sm">Click "Add Employee" to get started.</p>
-                                    {% else %}
-                                    <p class="mt-2 text-sm">No employees match the current filter.</p>
-                                    {% endif %}
+                                <td colspan="10" class="text-center p-20 bg-slate-50/50">
+                                    <div class="flex flex-col items-center gap-3">
+                                        <i data-lucide="inbox" class="w-12 h-12 text-slate-300"></i>
+                                        <p class="font-black text-slate-400 uppercase tracking-widest text-sm">No Matching Records Found</p>
+                                        {% if user.is_superuser %}
+                                        <p class="text-xs text-slate-500">Add a new candidate to populate the database.</p>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-                 <div class="p-4 border-t flex justify-end">
-                    <!-- Pagination can be added here -->
-                </div>
             </div>
         </main>
     </div>
 
-    <!-- 
-      MODIFICATION 3:
-      Added the HTML for the modal popup. 
-      It's hidden by default and will be controlled by new JS.
-    -->
-    <div id="detailsModal" class="fixed inset-0 bg-slate-900 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
-            <div class="flex justify-between items-center p-4 border-b">
-                <h3 id="modalTitle" class="text-lg font-semibold text-slate-800">Details</h3>
-                <button id="closeModalBtn" class="text-slate-500 hover:text-slate-800">
-                    <i data-lucide="x" class="w-6 h-6"></i>
+    <!-- Modal Implementation -->
+    <div id="detailsModal" class="fixed inset-0 bg-[#0f172a]/95 backdrop-blur-sm flex items-center justify-center p-4 z-[100] hidden">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+            <div class="flex justify-between items-center p-6 border-b bg-slate-50">
+                <h3 id="modalTitle" class="text-sm font-black uppercase tracking-widest text-slate-800">Detail Insights</h3>
+                <button id="closeModalBtn" class="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-slate-900"></i>
                 </button>
             </div>
-            <div id="modalContent" class="p-6 text-slate-600 min-h-[100px]">
-                <!-- Content will be injected by JS -->
+            <div id="modalContent" class="p-8 text-slate-700 min-h-[150px] leading-relaxed">
+                <!-- Data Placeholder -->
+            </div>
+            <div class="p-6 bg-slate-50 border-t flex justify-end">
+                <button onclick="closeModal()" class="px-6 py-2 bg-slate-900 text-white text-xs font-black rounded-lg">DISMISS</button>
             </div>
         </div>
     </div>
 
-
-    <!-- 
-    ================================================================
-    == REWRITTEN JAVASCRIPT BLOCK
-    == This block now controls all filtering on the FRONTEND
-    == by showing/hiding table rows.
-    ================================C================================
-    -->
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();
 
-        // 1. Get DOM References
+        // 1. DOM References
         const filterButton = document.getElementById('filterButton');
         const fromDateInput = document.getElementById('fromDate');
         const toDateInput = document.getElementById('toDate');
@@ -538,200 +424,71 @@
         const loadingIndicator = document.getElementById('loadingIndicator');
         const employeeTableBody = document.querySelector('#employeeTable tbody'); 
         const noEmployeesMessageRow = document.getElementById('noEmployeesMessage');
-
-        // --- MODIFICATION 4: Get new DOM references for the modal ---
         const detailsModal = document.getElementById('detailsModal');
         const modalTitle = document.getElementById('modalTitle');
         const modalContent = document.getElementById('modalContent');
         const closeModalBtn = document.getElementById('closeModalBtn');
 
-
-        // Utility function to get CSRF token (still needed for delete forms)
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    let cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-        
-        // Custom message box utility (replaces confirm())
-        // Re-named to avoid conflict with window.confirm
-        function showModalConfirm(message, callback) {
-            // This is a placeholder. For a real replacement of confirm(),
-            // you would build a custom modal here.
-            // For now, we just log it and default to 'true' for the delete to work.
-            console.warn("Confirmation required:", message);
-            const userConfirmed = true; // Simulating user clicking "OK"
-            
-            // This is a basic implementation. A real one would use a custom modal.
-            // We'll use the browser's confirm for now as it's complex to replace
-            // without a full modal library.
-            // The user's onclick="return confirm(...)" is still in place.
-        }
-
-        // Custom message box utility (replaces alert())
-        function alertMessage(message) {
-            console.warn("User Message:", message);
-            const existingAlert = document.getElementById('temp-alert-message');
-            if (existingAlert) existingAlert.remove();
-
-            const alertDiv = document.createElement('div');
-            alertDiv.id = 'temp-alert-message';
-            alertDiv.className = 'fixed top-4 right-4 bg-red-600 text-white p-4 rounded-lg shadow-xl z-[100] transition-opacity duration-300 opacity-100';
-            alertDiv.textContent = message;
-
-            document.body.appendChild(alertDiv);
-            
-            setTimeout(() => {
-                alertDiv.classList.remove('opacity-100');
-                alertDiv.classList.add('opacity-0');
-                setTimeout(() => alertDiv.remove(), 300);
-            }, 5000);
-        }
-
-        // --- REWRITTEN: Unified Filtering Logic ---
-
-        // Main filter function, handles date, site, AND optional status
+        // Main filter function
         function applyFilters(statusToFilter = null) {
             const fromDate = fromDateInput.value;
             const toDate = toDateInput.value;
             const selectedSite = companySelect.value;
 
             if (!fromDate || !toDate || !selectedSite) {
-                alertMessage('Please select both a From Date, a To Date, and a Site.');
+                alertMessage('Select From Date, To Date, and Site.');
                 return;
             }
 
-            // Only update header if it's a new site filter (not just a status click)
-            if (statusToFilter === null) {
-                if (headerX) headerX.textContent = selectedSite;
-            }
-            
+            if (statusToFilter === null) { if (headerX) headerX.textContent = selectedSite; }
             if (loadingIndicator) loadingIndicator.classList.remove('hidden');
 
-            // 1. Initialize summary counts
-            const counts = {
-                selected: 0,
-                offered: 0,
-                rejected: 0,
-                joined: 0,
-                pending: 0,
-                left: 0,
-                total: 0
-            };
-
+            const counts = { selected: 0, offered: 0, rejected: 0, joined: 0, pending: 0, left: 0, total: 0 };
             let visibleRows = 0;
-            const allRows = employeeTableBody.querySelectorAll('tr');
+            const allRows = employeeTableBody.querySelectorAll('tr:not(#noEmployeesMessage)');
 
-            // 2. Loop through all table rows
             allRows.forEach(row => {
                 const rowDate = row.dataset.createdDate;
                 const rowSite = row.dataset.site;
                 const rowStatus = row.dataset.status;
 
-                if (!rowDate || !rowSite || !rowStatus) {
-                    // This handles the "noEmployeesMessageRow" as well
-                    if (row.id === 'noEmployeesMessage') {
-                        row.style.display = 'none'; // Always hide message row during filtering
-                    }
-                    return; // Skip this row
-                }
-
-                // 3. Check for base matches (date and site)
                 const siteMatch = (rowSite === selectedSite);
                 const dateMatch = (rowDate >= fromDate && rowDate <= toDate);
 
                 if (siteMatch && dateMatch) {
-                    // This row is within the date/site range.
-                    // ALWAYS count it for the summary table.
-                    if (counts.hasOwnProperty(rowStatus)) {
-                        counts[rowStatus]++;
-                    }
+                    if (counts.hasOwnProperty(rowStatus)) counts[rowStatus]++;
                     counts.total++;
-
-                    // 4. Now, check if it should be VISIBLE
-                    // (statusToFilter is null or 'total') OR (rowStatus matches)
                     const statusMatch = (!statusToFilter || statusToFilter === 'total' || rowStatus === statusToFilter);
-
-                    if (statusMatch) {
-                        row.style.display = ''; // Show row
-                        visibleRows++;
-                    } else {
-                        row.style.display = 'none'; // Hide row
-                    }
+                    if (statusMatch) { row.style.display = ''; visibleRows++; } 
+                    else { row.style.display = 'none'; }
                 } else {
-                    // 5. Hide row if it fails date/site match
                     row.style.display = 'none';
                 }
             });
 
-            // 6. Update the summary table with the new counts
-            // This happens every time to reflect the date/site query
             updateSummaryTable(counts);
-
-            // 7. Handle "No employees found" message
-            if (noEmployeesMessageRow) {
-                if (visibleRows === 0) {
-                    noEmployeesMessageRow.style.display = ''; // Show message
-                } else {
-                    noEmployeesMessageRow.style.display = 'none'; // Hide message
-                }
-            }
-            
+            if (noEmployeesMessageRow) noEmployeesMessageRow.style.display = (visibleRows === 0) ? '' : 'none';
             if (loadingIndicator) loadingIndicator.classList.add('hidden');
         }
 
-        // --- Event Listener for the "Apply Filters" Button ---
-        if (filterButton) {
-            filterButton.addEventListener('click', function() {
-                // Pass null to signal a base filter (date + site + all statuses)
-                applyFilters(null); 
-            });
-        }
+        if (filterButton) filterButton.addEventListener('click', () => applyFilters(null));
 
-        // --- NEW: Event Listener for Clicks on the Summary Table ---
         if (summaryMatrixBody) {
-            summaryMatrixBody.addEventListener('click', function(e) {
-                // Find the 'tr' element that was clicked on
+            summaryMatrixBody.addEventListener('click', (e) => {
                 const clickedRow = e.target.closest('tr');
-
-                // Check if a valid row with a status was clicked
-                if (clickedRow && clickedRow.dataset.status) {
-                    const statusToFilter = clickedRow.dataset.status;
-                    
-                    // Call the main filter function, passing the specific status
-                    applyFilters(statusToFilter);
-                }
+                if (clickedRow && clickedRow.dataset.status) applyFilters(clickedRow.dataset.status);
             });
         }
 
-        // --- Function to Update the Summary Table DOM (Unchanged) ---
-        // This function is still needed to update the sidebar summary
         function updateSummaryTable(counts) {
             const statusOrder = ['SELECTED', 'OFFERED', 'REJECTED', 'JOINED', 'PENDING', 'LEFT', 'TOTAL'];
-            if (summaryMatrixBody) {
-                summaryMatrixBody.querySelectorAll('tr').forEach((row, index) => {
-                    const status = statusOrder[index];
-                    const statusKey = status.toLowerCase();
-                    const count = counts[statusKey] !== undefined ? counts[statusKey] : 0;
-                    let countCell = row.querySelector('td:nth-child(2)');
-                    if (countCell) {
-                       countCell.textContent = count;
-                    }
-                });
-            }
+            summaryMatrixBody.querySelectorAll('tr').forEach((row, index) => {
+                const statusKey = statusOrder[index].toLowerCase();
+                const countCell = row.querySelector('td:nth-child(2)');
+                if (countCell) countCell.textContent = counts[statusKey] || 0;
+            });
         }
 
-        // --- Sidebar Toggle Logic (Unchanged) ---
-        // Your existing JS logic will work perfectly with the new default state
         const sidebar = document.getElementById('sidebar');
         const toggleBtn = document.getElementById('toggleSidebar');
         const mainContent = document.getElementById('mainContent');
@@ -740,99 +497,50 @@
             toggleBtn.addEventListener('click', () => {
                 sidebar.classList.toggle('sidebar-collapsed');
                 sidebar.classList.toggle('sidebar-expanded');
-
-                // Check which state it *is* now
                 if (sidebar.classList.contains('sidebar-collapsed')) {
-                    // It is NOW collapsed
                     mainContent.classList.remove('ml-64');
-                    mainContent.classList.add('ml-20'); // ml-20 is 5rem
+                    mainContent.classList.add('ml-20');
                 } else {
-                    // It is NOW expanded
                     mainContent.classList.remove('ml-20');
-                    mainContent.classList.add('ml-64'); // ml-64 is 16rem
+                    mainContent.classList.add('ml-64');
                 }
             });
         }
 
-        // --- MODIFICATION 5: Add new functions and listeners for the modal ---
-        
-        /**
-         * Opens the modal with the specified title and content.
-         * @param {string} title - The text to show in the modal header.
-         * @param {string} content - The HTML content to show in the modal body.
-         */
         function openModal(title, content) {
-            if (!detailsModal || !modalTitle || !modalContent) return;
             modalTitle.textContent = title;
             modalContent.innerHTML = content;
             detailsModal.classList.remove('hidden');
-            // Re-run lucide.createIcons() in case we added an icon
             lucide.createIcons();
         }
 
-        /**
-         * Closes the modal.
-         */
-        function closeModal() {
-            if (!detailsModal) return;
-            detailsModal.classList.add('hidden');
-        }
+        function closeModal() { detailsModal.classList.add('hidden'); }
+        if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+        if (detailsModal) detailsModal.addEventListener('click', (e) => { if (e.target.id === 'detailsModal') closeModal(); });
 
-        // Listener to close the modal with the 'X' button
-        if (closeModalBtn) {
-            closeModalBtn.addEventListener('click', closeModal);
-        }
-
-        // Listener to close the modal by clicking on the background overlay
-        if (detailsModal) {
-            detailsModal.addEventListener('click', (e) => {
-                // Check if the click was on the overlay (the modal itself)
-                if (e.target.id === 'detailsModal') {
-                    closeModal();
-                }
-            });
-        }
-
-        // Listener for clicks on the status badges within the table
         if (employeeTableBody) {
             employeeTableBody.addEventListener('click', (e) => {
-                // Find the closest '.status-badge' that was clicked
                 const badge = e.target.closest('.status-badge');
-                
-                // If the click wasn't on a badge, do nothing
                 if (!badge) return; 
-
-                // Find the parent table row to get its data
                 const row = badge.closest('tr');
-                if (!row) return;
-
                 const statusType = badge.dataset.statusType;
-
                 if (statusType === 'offered') {
                     const url = row.dataset.offerLetterUrl;
-                    if (url) {
-                        // Create a link for the modal content
-                        const content = `<a href="${url}" target="_blank" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium py-2 px-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-                                        <i data-lucide="external-link" class="w-4 h-4"></i>
-                                        View Uploaded Offer Letter
-                                     </a>`;
-                        openModal('Offer Letter', content);
-                    } else {
-                        // Show a message if no file exists
-                        openModal('Offer Letter', '<p class="text-slate-500">No offer letter has been uploaded for this employee.</p>');
-                    }
-
+                    openModal('Offer Letter Archive', url ? `<div class="flex flex-col items-center gap-4"><p class="text-sm text-slate-500">Verified document link found.</p><a href="${url}" target="_blank" class="flex items-center gap-2 text-white bg-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition"><i data-lucide="external-link" class="w-4 h-4"></i> View Official Letter</a></div>` : '<p class="text-slate-400 italic text-center">No digital copy has been uploaded for this candidate.</p>');
                 } else if (statusType === 'rejected') {
                     const remarks = row.dataset.remarks;
-                    if (remarks) {
-                        // Show the remarks text
-                        openModal('Rejection Remarks', `<p class="text-slate-700 whitespace-pre-wrap">${remarks}</p>`);
-                    } else {
-                        // Show a message if no remarks exist
-                        openModal('Rejection Remarks', '<p class="text-slate-500">No remarks were provided for this rejection.</p>');
-                    }
+                    openModal('Decision Log: Rejected', remarks ? `<div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-inner"><p class="text-slate-700 text-sm italic font-medium whitespace-pre-wrap">"${remarks}"</p></div>` : '<p class="text-slate-400 text-center italic">No audit trail provided for this decision.</p>');
                 }
             });
+        }
+
+        function alertMessage(msg) {
+            const div = document.createElement('div');
+            div.className = 'fixed top-6 right-6 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl z-[200] font-bold text-sm border-b-4 border-blue-500 transition-all transform';
+            div.innerHTML = `<div class="flex items-center gap-3"><i data-lucide="info" class="w-4 h-4 text-blue-400"></i> ${msg}</div>`;
+            document.body.appendChild(div);
+            lucide.createIcons();
+            setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 4000);
         }
     </script>
 </body>

@@ -42,7 +42,11 @@
             border: 1px solid #e2e8f0;
         }
         
-        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        table { border-collapse: separate; border-spacing: 0; width: 100%; background-color: #0f172a; }
+        tbody { background-color: white; }
+        thead {
+            background-color: #0f172a;
+        }
 
         /* Vertical Stickiness - Sticks to the container top */
         thead th { 
@@ -52,6 +56,9 @@
             text-align: center; white-space: nowrap;
         }
         thead tr:nth-child(2) th { top: 41px; z-index: 49; }
+
+        thead tr:first-child th { top: 0; height: 44px; }
+        thead tr:nth-child(2) th { top: 43px; z-index: 49; }
 
         /* Horizontal Stickiness - Designation column stays fixed while moving right */
         .sticky-col-left {
@@ -98,15 +105,11 @@
                 </a>
                 <div>
                     <h1 class="text-xl font-black text-slate-900 tracking-tight leading-none mb-1">Manpower Ledger</h1>
-                    <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest"><i class="fas fa-database mr-1"></i> Database Mode Active</p>
+                    <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest"><i class="fas fa-database mr-1"></i> Database </p>
                 </div>
             </div>
             
             <div class="flex items-center gap-3">
-                <div class="hidden lg:flex flex-col items-end px-4 border-r border-slate-200">
-                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Current Session</span>
-                    <span class="text-sm font-black text-slate-700">{% if current_date %}{{ current_date }}{% else %}{% now "Y-m-d" %}{% endif %}</span>
-                </div>
                 <button type="button" onclick="exportExcel()" class="bg-white hover:bg-slate-50 text-emerald-600 border-2 border-emerald-600 px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 shadow-sm">
                     <i class="fas fa-file-excel"></i> Export Daily
                 </button>
@@ -211,9 +214,12 @@
                             <th rowspan="2" class="p-3 text-[10px] font-bold uppercase sticky-col-left min-w-[240px]">Designation</th>
                             <th rowspan="2" class="p-3 text-[10px] font-bold uppercase w-20 border-r border-slate-700">Skill</th>
                             <th rowspan="2" class="p-3 text-[10px] font-bold uppercase w-20 bg-slate-800">Scope</th>
-                            <th colspan="6" class="p-2 text-[10px] font-black uppercase bg-slate-800 border-b border-slate-700 tracking-widest">
+                            
+                            <!-- Removed the bottom border here for a seamless look -->
+                            <th colspan="6" class="p-2 text-[10px] font-black uppercase bg-slate-800 tracking-widest" style="border-bottom: none !important;">
                                 DATE : {{ report_date }}
                             </th>
+                            
                             <th rowspan="2" class="p-3 text-[10px] font-bold uppercase min-w-[180px]">Remarks</th>
                         </tr>
                         <tr class="text-white">
