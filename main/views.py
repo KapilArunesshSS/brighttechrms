@@ -106,8 +106,6 @@ def FFR(request):
     # Filter structure based on user selection
     if selected_site == "ALL":
         structure_qs = SiteStructure.objects.all()
-    elif selected_site == "AGNI":
-        structure_qs = SiteStructure.objects.filter(site__in=["AGNI-CCM", "AGNI-IF"])
     else:
         structure_qs = SiteStructure.objects.filter(site=selected_site)
 
@@ -154,10 +152,7 @@ def FFR(request):
     })
 @login_required(login_url='login')
 def export_ffr(request):
-    """
-    Generates a professionally formatted Excel report matching the 
-    reference image. Fixes MergedCell Attribute errors and formatting.
-    """
+
     site_filter = request.GET.get('site_selection', 'ALL')
     date_filter = request.GET.get('report_date')
 
@@ -171,8 +166,6 @@ def export_ffr(request):
     # 1. Fetch relevant Site Structure rows
     if site_filter == "ALL":
         structure_qs = SiteStructure.objects.all()
-    elif site_filter == "AGNI":
-        structure_qs = SiteStructure.objects.filter(site__in=["AGNI-CCM", "AGNI-IF"])
     else:
         structure_qs = SiteStructure.objects.filter(site=site_filter)
 
@@ -299,8 +292,6 @@ def export_ffr_summary(request):
     # 2. Fetch Structure
     if site_filter == "ALL":
         structure_qs = SiteStructure.objects.all().order_by('sr_no')
-    elif site_filter == "AGNI":
-        structure_qs = SiteStructure.objects.filter(site__icontains="AGNI").order_by('sr_no')
     else:
         structure_qs = SiteStructure.objects.filter(site=site_filter).order_by('sr_no')
 

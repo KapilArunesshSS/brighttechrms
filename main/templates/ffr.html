@@ -167,7 +167,7 @@
                         <label class="text-[10px] font-black text-slate-500 uppercase">Site Selection</label>
                         <select name="site_selection" id="site_selection_picker" onchange="this.form.submit()"
                                 class="bg-white border border-slate-200 rounded-xl px-4 py-2 font-bold text-slate-700 text-sm min-w-[200px] shadow-sm">
-                            <option value="ALL" {% if selected_site == 'ALL' %}selected{% endif %}>ALL SITE (Global View)</option>
+                            <option value="ALL" {% if selected_site == 'ALL' %}selected{% endif %}>ALL SITE </option>
                             <option value="BMM" {% if selected_site == 'BMM' %}selected{% endif %}>BMM</option>
                             <option value="AGNI" {% if selected_site == 'AGNI' %}selected{% endif %}>AGNI</option>
                             <option value="JAIRAJ" {% if selected_site == 'JAIRAJ' %}selected{% endif %}>JAIRAJ</option>
@@ -318,13 +318,14 @@
         }
 
         function initIndicators() {
-            const panel = document.getElementById('site-indicators'); panel.innerHTML = '';
+            const panel = document.getElementById('site-indicators'); 
+            panel.innerHTML = '';
+            
+            // Site list now includes common AGNI only
             ["BMM", "JAIRAJ", "MSSSL", "Arjas", "SLR", "AGNI"].forEach(s => {
-                const filter = (s === "AGNI") ? ["AGNI-CCM", "AGNI-IF"] : [s];
                 let ts=0, tp=0, active=false;
                 
-                // Uses indicatorData (which contains ALL sites) instead of tableData
-                indicatorData.filter(r => filter.includes(r.site)).forEach(r => { 
+                indicatorData.filter(r => r.site === s).forEach(r => { 
                     ts += r.scope; 
                     tp += r.p; 
                     if(r.p > 0) active=true; 
@@ -335,11 +336,12 @@
                 card.innerHTML = `<p class="text-[10px] font-black text-slate-400 uppercase mb-1">${s}</p>
                     <p class="text-xl font-black ${active ? 'text-slate-900' : 'text-slate-300'}">${ts > 0 ? (tp/ts*100).toFixed(1) : 0.0}%</p>
                     <p class="text-[9px] font-bold mt-1 uppercase ${active ? 'text-emerald-600' : 'text-slate-400'}">
-                    ${active ? 'Active' : 'Pending'}</p>`;
+                    ${active ? 'Data Active' : 'Pending'}</p>`;
                 panel.appendChild(card);
             });
             updateGlobalStats();
         }
+
 
         function calcRow(id, scope) {
             const p = parseInt(document.querySelector(`input[name="p_${id}"]`).value) || 0;
