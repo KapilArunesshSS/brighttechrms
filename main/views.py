@@ -70,10 +70,8 @@ def FFR(request):
                     # Security validation
                     if not is_superuser:
                         allowed = EMAIL_SITE_MAP.get(user_email)
-                        if allowed == "AGNI":
-                            if struct.site not in ["AGNI-CCM", "AGNI-IF"]: continue
-                        elif struct.site != allowed:
-                            continue
+                        if struct.site != allowed:
+                            raise ValueError(f"Unauthorized attempt to submit data for {struct.site} by {user_email}")
 
                     # Safe conversion to handle empty inputs
                     def s_int(v):
