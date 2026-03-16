@@ -166,6 +166,13 @@
                                     <td class="py-2.5 px-3 text-slate-400">LEFT</td>
                                     <td class="py-2.5 px-3 text-right font-black text-slate-400">0</td>
                                 </tr>
+                                <!-- Re-added Profile Bank row for sidebar -->
+                                {% if user.is_superuser or not user.is_staff %}
+                                <tr class="hover:bg-blue-500/10 cursor-pointer transition-colors" data-status="profile_bank">
+                                    <td class="py-2.5 px-3 text-cyan-400 font-bold">PROFILE BANK <i data-lucide="zap" class="w-3 h-3 inline"></i></td>
+                                    <td class="py-2.5 px-3 text-right font-black text-cyan-400">0</td>
+                                </tr>
+                                {% endif %}
                                 <tr class="bg-blue-600/10 font-bold" data-status="total">
                                     <td class="py-2.5 px-3 text-blue-100">TOTAL</td>
                                     <td class="py-2.5 px-3 text-right text-sm text-emerald-400 font-black">0</td>
@@ -206,8 +213,8 @@
             </header>
             
             <!-- Global Stats Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-5 mb-10">
-                <!-- Card Component -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8 gap-5 mb-10">
+                <!-- Static Display Cards (Require full form filter or are static display) -->
                 {% with card_style="bg-white p-5 rounded-2xl shadow-sm border-t-4 flex flex-col justify-between h-32 hover:shadow-md transition-shadow" %}
                 <div class="{{ card_style }} border-blue-500">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Database</p>
@@ -258,6 +265,16 @@
                         <i data-lucide="door-open" class="w-5 h-5 text-slate-400 mb-1"></i>
                     </div>
                 </div>
+                <!-- Interactive Profile Bank Card (Global Filter Bypass) -->
+                {% if user.is_superuser or not user.is_staff %}
+                <div class="{{ card_style }} border-cyan-500 cursor-pointer transform hover:-translate-y-1 transition-transform" onclick="filterByStatusOnly('profile_bank')">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Profile Bank <span class="bg-cyan-100 text-cyan-600 px-1 rounded ml-1 text-[8px]">CLICK</span></p>
+                    <div class="flex items-end justify-between">
+                        <p class="text-3xl font-black text-slate-800">{{ profile_bank_count }}</p>
+                        <i data-lucide="archive" class="w-5 h-5 text-cyan-500 mb-1"></i>
+                    </div>
+                </div>
+                {% endif %}
                 {% endwith %}
             </div>
 
@@ -307,6 +324,7 @@
                                 data-created-date="{{ employee.created_at|date:'Y-m-d' }}"
                                 data-site="{{ employee.company }}"
                                 data-status="{{ employee.status|lower }}"
+                                {% if employee.status|lower == 'profile_bank' %}style="display: none;"{% endif %}
                                 {% if employee.offer_letter %}data-offer-letter-url="{{ employee.offer_letter.url }}"{% endif %}
                                 {% if employee.remarks %}data-remarks="{{ employee.remarks|escapejs }}"{% endif %}>
                                 
@@ -320,7 +338,7 @@
                                 </td>
                                 <td class="p-5 text-sm font-semibold text-slate-600">{{ employee.contact_number }}</td>
                                 <td class="p-5 text-sm font-bold text-blue-600">{{ employee.role }}</td>
-                                <td class="p-5 text-sm font-black text-slate-800">{{ employee.company }}</td>
+                                <td class="p-5 text-sm font-black text-slate-800">{{ employee.company|default:"-" }}</td>
                                 <td class="p-5">
                                     {% if employee.status|lower == 'selected' %}
                                         <span class="status-badge inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-1.5 rounded-full border border-emerald-100">
@@ -345,6 +363,11 @@
                                     {% elif employee.status|lower == 'left' %}
                                          <span class="status-badge inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 text-[10px] font-black px-3 py-1.5 rounded-full border border-slate-200">
                                             <span class="w-1.5 h-1.5 bg-slate-400 rounded-full"></span> LEFT
+                                        </span>
+                                    {% elif employee.status|lower == 'profile_bank' %}
+                                         <!-- Re-added proper styling for Profile Bank badge -->
+                                         <span class="status-badge inline-flex items-center gap-1.5 bg-cyan-50 text-cyan-700 text-[10px] font-black px-3 py-1.5 rounded-full border border-cyan-100">
+                                            <span class="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span> PRO-BANK
                                         </span>
                                     {% endif %}
                                 </td>
@@ -429,7 +452,7 @@
         const modalContent = document.getElementById('modalContent');
         const closeModalBtn = document.getElementById('closeModalBtn');
 
-        // Main filter function
+        // Main filter function (Requires Date & Site)
         function applyFilters(statusToFilter = null) {
             const fromDate = fromDateInput.value;
             const toDate = toDateInput.value;
@@ -443,7 +466,7 @@
             if (statusToFilter === null) { if (headerX) headerX.textContent = selectedSite; }
             if (loadingIndicator) loadingIndicator.classList.remove('hidden');
 
-            const counts = { selected: 0, offered: 0, rejected: 0, joined: 0, pending: 0, left: 0, total: 0 };
+            const counts = { selected: 0, offered: 0, rejected: 0, joined: 0, pending: 0, left: 0, profile_bank: 0, total: 0 };
             let visibleRows = 0;
             const allRows = employeeTableBody.querySelectorAll('tr:not(#noEmployeesMessage)');
 
@@ -451,6 +474,12 @@
                 const rowDate = row.dataset.createdDate;
                 const rowSite = row.dataset.site;
                 const rowStatus = row.dataset.status;
+
+                // Hide profile bank completely from normal filters
+                if (rowStatus === 'profile_bank') {
+                    row.style.display = 'none';
+                    return; 
+                }
 
                 const siteMatch = (rowSite === selectedSite);
                 const dateMatch = (rowDate >= fromDate && rowDate <= toDate);
@@ -471,17 +500,43 @@
             if (loadingIndicator) loadingIndicator.classList.add('hidden');
         }
 
+        // Bypass function strictly for global status cards and Profile Bank
+        function filterByStatusOnly(status) {
+            let visibleRows = 0;
+            const allRows = employeeTableBody.querySelectorAll('tr:not(#noEmployeesMessage)');
+            
+            allRows.forEach(row => {
+                const rowStatus = row.dataset.status;
+                if (rowStatus === status) {
+                    row.style.display = '';
+                    visibleRows++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            if (noEmployeesMessageRow) noEmployeesMessageRow.style.display = (visibleRows === 0) ? '' : 'none';
+        }
+
         if (filterButton) filterButton.addEventListener('click', () => applyFilters(null));
 
         if (summaryMatrixBody) {
             summaryMatrixBody.addEventListener('click', (e) => {
                 const clickedRow = e.target.closest('tr');
-                if (clickedRow && clickedRow.dataset.status) applyFilters(clickedRow.dataset.status);
+                if (clickedRow && clickedRow.dataset.status) {
+                    // Profile Bank bypasses Date/Site validation completely
+                    if (clickedRow.dataset.status === 'profile_bank') {
+                        filterByStatusOnly('profile_bank');
+                    } else {
+                        // All other summary rows trigger normal validation
+                        applyFilters(clickedRow.dataset.status);
+                    }
+                }
             });
         }
 
         function updateSummaryTable(counts) {
-            const statusOrder = ['SELECTED', 'OFFERED', 'REJECTED', 'JOINED', 'PENDING', 'LEFT', 'TOTAL'];
+            // Re-added PROFILE_BANK to ensure it gets updated in the sidebar UI
+            const statusOrder = ['SELECTED', 'OFFERED', 'REJECTED', 'JOINED', 'PENDING', 'LEFT', 'PROFILE_BANK', 'TOTAL'];
             summaryMatrixBody.querySelectorAll('tr').forEach((row, index) => {
                 const statusKey = statusOrder[index].toLowerCase();
                 const countCell = row.querySelector('td:nth-child(2)');

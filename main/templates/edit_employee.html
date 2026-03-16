@@ -40,7 +40,6 @@
         {% if messages %}
         <div class="mb-6 space-y-2">
             {% for message in messages %}
-            <!-- FIX: Corrected 'class.' to 'class' -->
             <div class="p-4 rounded-lg {% if message.tags == 'success' %} bg-green-100 text-green-800 {% else %} bg-red-100 text-red-800 {% endif %}" role="alert">
                 {{ message }}
             </div>
@@ -83,6 +82,8 @@
                             {% if user.is_staff and not user.is_superuser %}disabled{% endif %}>
                             <!-- Rule: Editable by EVERYONE (User, Superuser) -->
 
+                        <option value="" disabled {% if not employee.company %}selected{% endif %}>-- Select Site --</option>
+                        <option value="None" id="opt-none" {% if employee.company != 'None' %}hidden{% endif %} {% if employee.company == 'None' %}selected{% endif %}>None</option>
                         <option value="BMM" {% if employee.company == 'BMM' %}selected{% endif %}>BMM</option>
                         <option value="SLR" {% if employee.company == 'SLR' %}selected{% endif %}>SLR</option>
                         <option value="ARJAS" {% if employee.company == 'ARJAS' %}selected{% endif %}>ARJAS</option>
@@ -92,7 +93,6 @@
                         <option value="COEGA" {% if employee.company == 'COEGA' %}selected{% endif %}>COEGA</option>
                         <option value="CD TECH" {% if employee.company == 'CD TECH' %}selected{% endif %}>CD TECH</option>
                     </select>
-                    
                 </div>
                 
                 <div>
@@ -210,7 +210,8 @@
                         <option value="rejected" {% if employee.status == 'rejected' %}selected{% endif %}>Rejected</option>
                         <option value="offered" {% if employee.status == 'offered' %}selected{% endif %}>Offered</option>
                         <option value="joined" {% if employee.status == 'joined' %}selected{% endif %}>Joined</option>
-                        <option value ="left" {% if employee.status == 'left' %}selected{% endif %}>Left</option>
+                        <option value="left" {% if employee.status == 'left' %}selected{% endif %}>Left</option>
+                        <option value="profile_bank" {% if employee.status == 'profile_bank' %}selected{% endif %}>Profile Bank</option>
                     </select>
                 </div>
 
@@ -313,13 +314,17 @@
             // --- Conditional Field Logic ---
             const statusSelect = document.getElementById('status');
             const remarksContainer = document.getElementById('remarks-container');
-            const remarksTextarea = document.getElementById('remarks'); // Get the textarea itself
+            const remarksTextarea = document.getElementById('remarks'); 
             const offerContainer = document.getElementById('offer-letter-container');
+            
+            // NEW: Elements for Profile Bank logic
+            const companySelect = document.getElementById('company');
+            const nullOpt = document.getElementById('opt-none');
 
             function toggleFieldsBasedOnStatus() {
                 const selectedStatus = statusSelect.value;
 
-                // --- MODIFICATION: Handle Remarks Field ---
+                // --- Handle Remarks Field ---
                 if (selectedStatus === 'rejected') {
                     remarksContainer.classList.remove('hidden');
                     remarksTextarea.required = true; // Set as mandatory
@@ -334,6 +339,21 @@
                 } else {
                     offerContainer.classList.add('hidden');
                 }
+
+                // --- NEW: Handle Profile Bank (Site logic) ---
+                if (selectedStatus === 'profile_bank') {
+                    if (nullOpt) nullOpt.hidden = false;
+                    companySelect.value = 'None';
+                    // Visually disable the site field while keeping it technically required/submittable
+                    companySelect.classList.add('bg-slate-100', 'text-slate-500', 'pointer-events-none');
+                } else {
+                    if (nullOpt) nullOpt.hidden = true;
+                    // If they switch away from Profile Bank, force them to pick a valid site
+                    if (companySelect.value === 'None') {
+                        companySelect.value = ''; 
+                    }
+                    companySelect.classList.remove('bg-slate-100', 'text-slate-500', 'pointer-events-none');
+                }
             }
 
             // Add event listener to run the function on change
@@ -345,4 +365,3 @@
     </script>
 </body>
 </html>
-

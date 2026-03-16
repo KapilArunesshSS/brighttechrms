@@ -389,13 +389,14 @@ def employee_list(request):
     employees = Employee.objects.all()
 
     # 2. Calculate the total count and the count for each status.
-    total_employees = employees.count()
+    total_employees = employees.exclude(status__iexact='profile_bank').count()
     joined_count = employees.filter(status__iexact ='joined').count()
     offered_count = employees.filter(status__iexact ='offered').count()
     selected_count = employees.filter(status__iexact ='selected').count()
     pending_count = employees.filter(status__iexact ='pending').count()
     rejected_count = employees.filter(status__iexact ='rejected').count()
     left_count = employees.filter(status__iexact ='left').count()
+    profile_bank_count = employees.filter(status__iexact='profile_bank').count()
     
     # 3. Add all calculated numbers to the context dictionary.
     context = {
@@ -407,6 +408,7 @@ def employee_list(request):
         'pending_count': pending_count,
         'rejected_count': rejected_count,
         'left_count': left_count,
+        'profile_bank_count': profile_bank_count,
     }
     
     # 4. Render the dashboard template with the context data.

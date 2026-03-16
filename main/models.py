@@ -9,7 +9,7 @@ class Employee(models.Model):
     age = models.PositiveIntegerField()
     company = models.CharField(max_length=50, default='Default Company')
     role = models.CharField(max_length=150)
-    status = models.CharField(max_length=10, default='pending')
+    status = models.CharField(max_length=50, default='pending')
     resume = models.FileField(upload_to='resumes/', null=True, blank=True)
     offer_letter = models.FileField(upload_to='offer_letters/', null=True, blank=True)
     remarks = models.TextField(null=True, blank=True)

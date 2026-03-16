@@ -80,6 +80,7 @@
                     <select id="company" name="company" required
                             class="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition">
                         <option value="" disabled selected> -----> </option>
+                        <option value="None" id="opt-none" hidden>None</option>
                         <option value="BMM">BMM</option>
                         <option value="SLR">SLR</option>
                         <option value="ARJAS">ARJAS</option>
@@ -208,6 +209,7 @@
                         <option value="offered">Offered</option>
                         <option value="joined">Joined</option>
                         <option value="Left">left</option>
+                        <option value="profile_bank">Profile Bank</option>
                     </select>
                 </div>
 
@@ -249,6 +251,32 @@
 
         resumeUpload.addEventListener('change', function(){
             fileChosen.textContent = this.files[0] ? this.files[0].name : 'No file chosen';
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusSelect = document.getElementById('status');
+            const companySelect = document.getElementById('company');
+            const nullOpt = document.getElementById('opt-none');
+
+            statusSelect.addEventListener('change', function() {
+                if (this.value === 'profile_bank') {
+                    // Make the 'None' option available and select it
+                    nullOpt.hidden = false;
+                    companySelect.value = 'None'; 
+                    // Make it look disabled but keep the required attribute intact
+                    companySelect.classList.add('bg-slate-100', 'text-slate-500', 'pointer-events-none');
+                } else {
+                    // Hide the 'None' option and force them to pick a real site if they switch back
+                    nullOpt.hidden = true;
+                    if (companySelect.value === 'None') {
+                        companySelect.value = ''; 
+                    }
+                    companySelect.classList.remove('bg-slate-100', 'text-slate-500', 'pointer-events-none');
+                }
+            });
+
+            // Trigger on load in case the form reloads with Profile Bank selected
+            statusSelect.dispatchEvent(new Event('change'));
         });
     </script>
 </body>
