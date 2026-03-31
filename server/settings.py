@@ -20,8 +20,8 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 # Allow your domain and localhost
-# ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost,.vercel.app").split(",")
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+
 # Application definition
 INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
@@ -99,8 +99,8 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
-
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 2500
+
 # --- AWS S3 & MEDIA CONFIGURATION ---
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 
@@ -109,15 +109,16 @@ if AWS_ACCESS_KEY_ID:
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'eu-north-1')
 
-    # 1. FIX: Added Signature Version for modern AWS regions
     AWS_S3_SIGNATURE_VERSION = 's3v4'
     
-    # 2. FIX: Set to True. This solves "Access Denied" errors by generating
-    # temporary secure links for your private files.
-    AWS_QUERYSTRING_AUTH = True 
+    # Changed to False so media files act as normal, non-expiring public links.
+    AWS_QUERYSTRING_AUTH = False 
     
     AWS_S3_FILE_OVERWRITE = False
-    AWS_DEFAULT_ACL = None
+    
+    # Ensures files uploaded to S3 are automatically granted public read access.
+    AWS_DEFAULT_ACL = 'public-read'
+    
     AWS_S3_VERIFY = True
 
     AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
@@ -136,9 +137,8 @@ if AWS_ACCESS_KEY_ID:
         },
     }
     
-    # 3. FIX: Simplified MEDIA_URL. 
-    # Because 'location' is 'media', files already have that prefix.
-    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+    # MEDIA_URL definition removed here. 
+    # django-storages automatically constructs the correct URL using AWS_S3_CUSTOM_DOMAIN and the 'location' option.
 
 else:
     # Local Development Fallback
