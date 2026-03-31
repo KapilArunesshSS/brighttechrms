@@ -108,6 +108,7 @@ if AWS_ACCESS_KEY_ID:
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'eu-north-1')
+    AWS_MEDIA_LOCATION = os.getenv('AWS_MEDIA_LOCATION', 'media')
 
     AWS_S3_SIGNATURE_VERSION = 's3v4'
     
@@ -122,13 +123,14 @@ if AWS_ACCESS_KEY_ID:
     AWS_S3_VERIFY = True
 
     AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_MEDIA_LOCATION}/'
 
     # MODERN STORAGES CONFIGURATION (Django 4.2+)
     STORAGES = {
         "default": {
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
             "OPTIONS": {
-                "location": "media",  # All uploads go into the 'media/' folder in S3
+                "location": AWS_MEDIA_LOCATION,
             },
         },
         "staticfiles": {
@@ -136,9 +138,6 @@ if AWS_ACCESS_KEY_ID:
             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
     }
-    
-    # MEDIA_URL definition removed here. 
-    # django-storages automatically constructs the correct URL using AWS_S3_CUSTOM_DOMAIN and the 'location' option.
 
 else:
     # Local Development Fallback
