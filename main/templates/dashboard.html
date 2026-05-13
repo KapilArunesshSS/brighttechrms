@@ -167,12 +167,12 @@
                                     <td class="py-2.5 px-3 text-right font-black text-slate-400">0</td>
                                 </tr>
                                 <!-- Re-added Profile Bank row for sidebar -->
-                                {% if user.is_superuser or not user.is_staff %}
+                                {% comment %} {% if user.is_superuser or not user.is_staff %}
                                 <tr class="hover:bg-blue-500/10 cursor-pointer transition-colors" data-status="profile_bank">
                                     <td class="py-2.5 px-3 text-cyan-400 font-bold">PROFILE BANK <i data-lucide="zap" class="w-3 h-3 inline"></i></td>
                                     <td class="py-2.5 px-3 text-right font-black text-cyan-400">0</td>
                                 </tr>
-                                {% endif %}
+                                {% endif %} {% endcomment %}
                                 <tr class="bg-blue-600/10 font-bold" data-status="total">
                                     <td class="py-2.5 px-3 text-blue-100">TOTAL</td>
                                     <td class="py-2.5 px-3 text-right text-sm text-emerald-400 font-black">0</td>
