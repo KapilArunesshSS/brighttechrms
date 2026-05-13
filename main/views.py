@@ -377,13 +377,8 @@ def export_ffr_summary(request):
     wb.save(response)
     return response
 @login_required(login_url='login')
-@login_required(login_url='login')
 def employee_list(request):
-    """
-    Handles displaying the employee list with case-insensitive site filtering.
-    All site mappings are handled locally within this function.
-    """
-    # Local mapping of admin emails to their specific site names
+    # This map defines which identifier (username/email) sees which site data
     email_site_map = {
         "admin.bmm@brighttech.net.in": "BMM",
         "admin.slr@brighttech.net.in": "SLR",
@@ -394,23 +389,32 @@ def employee_list(request):
     }
 
     user = request.user
-    # Start with all employees ordered by the most recent additions
     employees = Employee.objects.all().order_by('-created_at')
     user_site = None
 
-    if not user.is_superuser:
-        # Normalize email to lower case to ensure matching works regardless of entry
-        user_email = user.email.lower().strip() if user.email else ""
-        user_site = email_site_map.get(user_email)
+    # SUPERUSER RULE: If you are the boss, you see everything.
+    if user.is_superuser:
+        print("DEBUG: Superuser detected. Bypassing email filter.")
+    else:
+        # NORMAL USER RULE: Check username first (since you saved emails there), then email field as fallback
+        user_id_from_username = user.username.lower().strip() if user.username else ""
+        user_id_from_email = user.email.lower().strip() if user.email else ""
         
+        # Try to find the site using username, then fallback to email
+        user_site = email_site_map.get(user_id_from_username) or email_site_map.get(user_id_from_email)
+        
+        print(f"DEBUG: Logged in Username: '{user_id_from_username}'")
+        print(f"DEBUG: Mapped Site Found: '{user_site}'")
+
         if user_site:
-            # Using __iexact to prevent casing issues (e.g., 'Arjas' vs 'ARJAS')
+            # Filter employees by the mapped site (case-insensitive)
             employees = employees.filter(company__iexact=user_site)
         else:
-            # If the user's email isn't in the map, return an empty list for security
+            # Security: If no mapping is found, show nothing
+            print("DEBUG: Access Denied - No site mapping found for this user.")
             employees = Employee.objects.none()
 
-    # These counts automatically respect the site filter applied above
+    # These counts automatically respect the 'employees' filter applied above
     total_employees = employees.exclude(status__iexact='profile_bank').count()
     joined_count = employees.filter(status__iexact='joined').count()
     offered_count = employees.filter(status__iexact='offered').count()
