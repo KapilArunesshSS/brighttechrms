@@ -468,77 +468,75 @@ def add_employee(request):
     return render(request, 'add_employee.html')
 @login_required(login_url='login')
 def edit_employee(request, employee_id):
-    # Get the specific employee object we want to edit
     employee = get_object_or_404(Employee, id=employee_id)
 
-    # --- This block runs when the user submits the "Update Profile" form ---
     if request.method == 'POST':
-        
-        # 1. Update all the text-based fields from the form
-        if 'name' in request.POST:
-            employee.name = request.POST.get('name')
-        if 'age' in request.POST:
-            employee.age = request.POST.get('age')
-        if 'contact' in request.POST:
-            employee.contact_number = request.POST.get('contact')
-        if 'company' in request.POST:
-            employee.company = request.POST.get('company')
-        if 'role' in request.POST:
-            employee.role = request.POST.get('role')
+        try:
+            # 1. Update text fields (Only if they exist in POST)
+            # If fields are 'disabled' in HTML, they won't be in request.POST
+            if 'name' in request.POST:
+                employee.name = request.POST.get('name')
+            
+            if 'age' in request.POST:
+                age = request.POST.get('age')
+                employee.age = int(age) if age else None
+                
+            if 'contact' in request.POST:
+                employee.contact_number = request.POST.get('contact')
+                
+            if 'company' in request.POST:
+                company_val = request.POST.get('company')
+                # Handle the "None" string from your JavaScript logic
+                employee.company = None if company_val == "None" else company_val
+                
+            if 'role' in request.POST:
+                employee.role = request.POST.get('role')
 
-        status_submitted = 'status' in request.POST
-        if status_submitted:
-            employee.status = request.POST.get('status')
-            employee.remarks = request.POST.get('remarks')
+            # 2. Status & Remarks Logic
+            if 'status' in request.POST:
+                new_status = request.POST.get('status')
+                employee.status = new_status
+                employee.remarks = request.POST.get('remarks')
 
-            # Only run status-dependent cleanup when the status field was actually submitted.
-            if employee.status != 'rejected':
-                employee.remarks = None
+                # Logic Cleanup
+                if employee.status != 'rejected':
+                    employee.remarks = None
 
-            if employee.status != 'offered' and employee.offer_letter:
+                # If status changes from 'offered', we might want to clear the letter
+                if employee.status != 'offered' and employee.offer_letter:
+                    employee.offer_letter.delete(save=False)
+                    employee.offer_letter = None
+
+            # 3. Handle File Deletions (Checkboxes)
+            if request.POST.get('delete_offer_letter') and employee.offer_letter:
                 employee.offer_letter.delete(save=False)
                 employee.offer_letter = None
 
-        # --- 3. Handle the Offer Letter File ---
-        
-        # Check if the "delete_offer_letter" checkbox was ticked
-        if request.POST.get('delete_offer_letter'):
-            if employee.offer_letter:
-                employee.offer_letter.delete(save=False) # Delete file from storage
-                employee.offer_letter = None # Clear the field in the database
-
-        # Check if a *new* offer letter was uploaded
-        new_offer_letter = request.FILES.get('offer_letter')
-        if new_offer_letter:
-            if employee.offer_letter:
-                employee.offer_letter.delete(save=False) # Delete the old one first
-            employee.offer_letter = new_offer_letter # Save the new one
-
-        # --- 4. Handle the Resume File ---
-        
-        # Check if the "delete_resume" checkbox was ticked
-        if request.POST.get('delete_resume'):
-            if employee.resume:
+            if request.POST.get('delete_resume') and employee.resume:
                 employee.resume.delete(save=False)
                 employee.resume = None
 
-        # Check if a *new* resume was uploaded
-        new_resume = request.FILES.get('resume')
-        if new_resume:
-            if employee.resume:
-                employee.resume.delete(save=False)
-            employee.resume = new_resume
+            # 4. Handle New File Uploads
+            if 'offer_letter' in request.FILES:
+                new_file = request.FILES['offer_letter']
+                if employee.offer_letter:
+                    employee.offer_letter.delete(save=False)
+                employee.offer_letter = new_file
 
-        # --- 5. Save all changes to the database ---
-        employee.save()
-        
-        # Redirect back to the employee list page
-        return redirect('employee_list') # Make sure 'employee_list' is the name of your URL
+            if 'resume' in request.FILES:
+                new_file = request.FILES['resume']
+                if employee.resume:
+                    employee.resume.delete(save=False)
+                employee.resume = new_file
 
-    # --- This runs if it's a GET request (just loading the page) ---
-    context = {
-        'employee': employee
-    }
+            employee.save()
+            messages.success(request, f"Profile for {employee.name} updated successfully.")
+            return redirect('employee_list')
+
+        except Exception as e:
+            messages.error(request, f"Error updating profile: {str(e)}")
+
+    context = {'employee': employee}
     return render(request, 'edit_employee.html', context)
 
 @login_required(login_url='login')
