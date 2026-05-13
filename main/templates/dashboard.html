@@ -215,50 +215,50 @@
             <!-- Global Stats Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8 gap-5 mb-10">
                 <!-- Static Display Cards (Require full form filter or are static display) -->
-                {% with card_style="bg-white p-5 rounded-2xl shadow-sm border-t-4 flex flex-col justify-between h-32 hover:shadow-md transition-shadow" %}
-                <div class="{{ card_style }} border-blue-500">
+                {% with card_style="bg-white p-5 rounded-2xl shadow-sm border-t-4 flex flex-col justify-between h-32 hover:shadow-md transition-all cursor-pointer transform hover:-translate-y-1 active:scale-95" %}
+                <div class="{{ card_style }} border-blue-500" onclick="filterByStatusOnly('total')">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Database</p>
                     <div class="flex items-end justify-between">
                         <p class="text-3xl font-black text-slate-800">{{ total_employees }}</p>
                         <i data-lucide="users" class="w-5 h-5 text-blue-500 mb-1"></i>
                     </div>
                 </div>
-                <div class="{{ card_style }} border-purple-500">
+                <div class="{{ card_style }} border-purple-500" onclick="filterByStatusOnly('joined')">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Joined Team</p>
                     <div class="flex items-end justify-between">
                         <p class="text-3xl font-black text-slate-800">{{ joined_count }}</p>
                         <i data-lucide="user-plus" class="w-5 h-5 text-purple-500 mb-1"></i>
                     </div>
                 </div>
-                <div class="{{ card_style }} border-indigo-500">
+                <div class="{{ card_style }} border-indigo-500" onclick="filterByStatusOnly('offered')">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Offers Issued</p>
                     <div class="flex items-end justify-between">
                         <p class="text-3xl font-black text-slate-800">{{ offered_count }}</p>
                         <i data-lucide="mail-check" class="w-5 h-5 text-indigo-500 mb-1"></i>
                     </div>
                 </div>
-                <div class="{{ card_style }} border-emerald-500">
+                <div class="{{ card_style }} border-emerald-500" onclick="filterByStatusOnly('selected')">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Shortlisted</p>
                     <div class="flex items-end justify-between">
                         <p class="text-3xl font-black text-slate-800">{{ selected_count }}</p>
                         <i data-lucide="award" class="w-5 h-5 text-emerald-500 mb-1"></i>
                     </div>
                 </div>
-                <div class="{{ card_style }} border-amber-500">
+                <div class="{{ card_style }} border-amber-500" onclick="filterByStatusOnly('pending')">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Review</p>
                     <div class="flex items-end justify-between">
                         <p class="text-3xl font-black text-slate-800">{{ pending_count }}</p>
                         <i data-lucide="timer" class="w-5 h-5 text-amber-500 mb-1"></i>
                     </div>
                 </div>
-                <div class="{{ card_style }} border-rose-500">
+                <div class="{{ card_style }} border-rose-500" onclick="filterByStatusOnly('rejected')">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Declined</p>
                     <div class="flex items-end justify-between">
                         <p class="text-3xl font-black text-slate-800">{{ rejected_count }}</p>
                         <i data-lucide="user-x" class="w-5 h-5 text-rose-500 mb-1"></i>
                     </div>
                 </div>
-                <div class="{{ card_style }} border-slate-400">
+                <div class="{{ card_style }} border-slate-400" onclick="filterByStatusOnly('left')">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resigned</p>
                     <div class="flex items-end justify-between">
                         <p class="text-3xl font-black text-slate-800">{{ left_count }}</p>
@@ -507,31 +507,29 @@
             
             allRows.forEach(row => {
                 const rowStatus = row.dataset.status;
-                if (rowStatus === status) {
+
+                let isMatch = false;
+                
+                if (status === 'total') {
+                    // Total database includes everything EXCEPT Profile Bank
+                    isMatch = (rowStatus !== 'profile_bank');
+                } else {
+                    // Direct status match
+                    isMatch = (rowStatus === status);
+                }
+
+                if (isMatch) {
                     row.style.display = '';
                     visibleRows++;
                 } else {
                     row.style.display = 'none';
                 }
             });
+            
             if (noEmployeesMessageRow) noEmployeesMessageRow.style.display = (visibleRows === 0) ? '' : 'none';
-        }
-
-        if (filterButton) filterButton.addEventListener('click', () => applyFilters(null));
-
-        if (summaryMatrixBody) {
-            summaryMatrixBody.addEventListener('click', (e) => {
-                const clickedRow = e.target.closest('tr');
-                if (clickedRow && clickedRow.dataset.status) {
-                    // Profile Bank bypasses Date/Site validation completely
-                    if (clickedRow.dataset.status === 'profile_bank') {
-                        filterByStatusOnly('profile_bank');
-                    } else {
-                        // All other summary rows trigger normal validation
-                        applyFilters(clickedRow.dataset.status);
-                    }
-                }
-            });
+            
+            // Optional: Scroll to the table for better UX on mobile
+            document.getElementById('employeeTable').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function updateSummaryTable(counts) {
