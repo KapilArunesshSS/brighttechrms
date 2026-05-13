@@ -83,24 +83,21 @@ def FFR(request):
                         try: return int(v) if v else 0
                         except: return 0
 
-                    # CRITICAL FIX: Delete any existing duplicates for this Date/Structure
-                    # This prevents the "returned more than one" error.
-                    ManpowerEntry.objects.filter(date=report_date, structure=struct).delete()
-
-                    # Create fresh record
-                    ManpowerEntry.objects.create(
+                    ManpowerEntry.objects.update_or_create(
                         date=report_date,
                         structure=struct,
-                        site=struct.site,
-                        department=struct.department,
-                        designation=struct.designation,
-                        skill_level=struct.skill_level,
-                        scope=struct.scope,
-                        present=s_int(request.POST.get(f'p_{struct_id}')),
-                        absent=s_int(request.POST.get(f'a_{struct_id}')),
-                        weekly_off=s_int(request.POST.get(f'w_{struct_id}')),
-                        overtime=s_int(request.POST.get(f'o_{struct_id}')),
-                        remarks=request.POST.get(f'rem_{struct_id}', '')
+                        defaults={
+                            'site': struct.site,
+                            'department': struct.department,
+                            'designation': struct.designation,
+                            'skill_level': struct.skill_level,
+                            'scope': struct.scope,
+                            'present': s_int(request.POST.get(f'p_{struct_id}')),
+                            'absent': s_int(request.POST.get(f'a_{struct_id}')),
+                            'weekly_off': s_int(request.POST.get(f'w_{struct_id}')),
+                            'overtime': s_int(request.POST.get(f'o_{struct_id}')),
+                            'remarks': request.POST.get(f'rem_{struct_id}', ''),
+                        }
                     )
             messages.success(request, f"Records for {selected_site} on {report_date} saved successfully.")
         except Exception as e:
@@ -478,23 +475,29 @@ def edit_employee(request, employee_id):
     if request.method == 'POST':
         
         # 1. Update all the text-based fields from the form
-        employee.name = request.POST.get('name')
-        employee.age = request.POST.get('age')
-        employee.contact_number = request.POST.get('contact')
-        employee.company = request.POST.get('company')
-        employee.role = request.POST.get('role')
-        employee.status = request.POST.get('status')
-        employee.remarks = request.POST.get('remarks')
+        if 'name' in request.POST:
+            employee.name = request.POST.get('name')
+        if 'age' in request.POST:
+            employee.age = request.POST.get('age')
+        if 'contact' in request.POST:
+            employee.contact_number = request.POST.get('contact')
+        if 'company' in request.POST:
+            employee.company = request.POST.get('company')
+        if 'role' in request.POST:
+            employee.role = request.POST.get('role')
 
-        # 2. Clean up conditional fields
-        # If status is not 'rejected', clear any old remarks
-        if employee.status != 'rejected':
-            employee.remarks = None # or '', depending on your model
-        
-        # If status is not 'offered', clear any old offer letter
-        if employee.status != 'offered' and employee.offer_letter:
-            employee.offer_letter.delete(save=False)
-            employee.offer_letter = None
+        status_submitted = 'status' in request.POST
+        if status_submitted:
+            employee.status = request.POST.get('status')
+            employee.remarks = request.POST.get('remarks')
+
+            # Only run status-dependent cleanup when the status field was actually submitted.
+            if employee.status != 'rejected':
+                employee.remarks = None
+
+            if employee.status != 'offered' and employee.offer_letter:
+                employee.offer_letter.delete(save=False)
+                employee.offer_letter = None
 
         # --- 3. Handle the Offer Letter File ---
         

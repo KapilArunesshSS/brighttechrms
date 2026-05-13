@@ -68,6 +68,11 @@ class ManpowerEntry(models.Model):
     overtime = models.IntegerField(default=0) 
     remarks = models.TextField(null=True, blank=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['date', 'structure'], name='unique_manpowerentry_date_structure')
+        ]
+
     @property
     def ff_ratio(self):
         return round((self.present / self.scope) * 100, 2) if self.scope > 0 else 0.00
