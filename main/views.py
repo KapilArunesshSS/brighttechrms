@@ -377,27 +377,52 @@ def export_ffr_summary(request):
     wb.save(response)
     return response
 @login_required(login_url='login')
+@login_required(login_url='login')
 def employee_list(request):
     """
-    Handles displaying the employee list and calculating the status counts
-    to be displayed on the dashboard.
+    Handles displaying the employee list with case-insensitive site filtering.
+    All site mappings are handled locally within this function.
     """
-    # 1. Fetch all employees from the database.
-    employees = Employee.objects.all()
+    # Local mapping of admin emails to their specific site names
+    email_site_map = {
+        "admin.bmm@brighttech.net.in": "BMM",
+        "admin.slr@brighttech.net.in": "SLR",
+        "admin.jr@brighttech.net.in": "JAIRAJ",
+        "admin.arj@brighttech.net.in": "ARJAS", 
+        "pm.ms@brighttech.net.in": "MSSSL",
+        "admin.agni@brighttech.net.in": "AGNI",
+    }
 
-    # 2. Calculate the total count and the count for each status.
+    user = request.user
+    # Start with all employees ordered by the most recent additions
+    employees = Employee.objects.all().order_by('-created_at')
+    user_site = None
+
+    if not user.is_superuser:
+        # Normalize email to lower case to ensure matching works regardless of entry
+        user_email = user.email.lower().strip() if user.email else ""
+        user_site = email_site_map.get(user_email)
+        
+        if user_site:
+            # Using __iexact to prevent casing issues (e.g., 'Arjas' vs 'ARJAS')
+            employees = employees.filter(company__iexact=user_site)
+        else:
+            # If the user's email isn't in the map, return an empty list for security
+            employees = Employee.objects.none()
+
+    # These counts automatically respect the site filter applied above
     total_employees = employees.exclude(status__iexact='profile_bank').count()
-    joined_count = employees.filter(status__iexact ='joined').count()
-    offered_count = employees.filter(status__iexact ='offered').count()
-    selected_count = employees.filter(status__iexact ='selected').count()
-    pending_count = employees.filter(status__iexact ='pending').count()
-    rejected_count = employees.filter(status__iexact ='rejected').count()
-    left_count = employees.filter(status__iexact ='left').count()
+    joined_count = employees.filter(status__iexact='joined').count()
+    offered_count = employees.filter(status__iexact='offered').count()
+    selected_count = employees.filter(status__iexact='selected').count()
+    pending_count = employees.filter(status__iexact='pending').count()
+    rejected_count = employees.filter(status__iexact='rejected').count()
+    left_count = employees.filter(status__iexact='left').count()
     profile_bank_count = employees.filter(status__iexact='profile_bank').count()
     
-    # 3. Add all calculated numbers to the context dictionary.
     context = {
         'employees': employees,
+        'user_site': user_site,
         'total_employees': total_employees,
         'joined_count': joined_count,
         'offered_count': offered_count,
@@ -408,7 +433,6 @@ def employee_list(request):
         'profile_bank_count': profile_bank_count,
     }
     
-    # 4. Render the dashboard template with the context data.
     return render(request, 'dashboard.html', context)
 @login_required(login_url='login')
 def add_employee(request):
