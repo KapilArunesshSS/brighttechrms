@@ -1,47 +1,105 @@
-🏢 Brighttech RMS - Manpower Management & Recruitment System
+DMRM: Recruitment Management & FFR System
 
-Brighttech RMS is an industrial-grade human resource management platform and real-time attendance tracking system. It is engineered to handle high-density manpower data across multiple industrial sites including BMM, SLR, JAIRAJ, Arjas, MSSSL, and the consolidated AGNI complex.
+DMRM is a specialized human resources and operations platform designed to digitize recruitment workflows and automate Filling Factor Ratio (FFR) tracking for industrial sites. This project transforms manual manpower ledgers into a real-time digital dashboard, optimized for high performance and reliability.
 
-Key Features
+🏗️ Project Structure
 
-Intelligent Manpower Ledger (FFR) – Optimized for massive data grids with real-time performance analytics.
+Based on the DMRM repository layout:
 
-Dynamic Color-Coding – Integrated JavaScript logic highlights performance ratios $\ge 90\%$ in Emerald Green, while underperforming rows appear in Rose Red.
+DMRM/
+├── main/                   # Primary Application Logic
+│   ├── migrations/         # Database schema history
+│   ├── templates/          # HTML User Interface
+│   │   ├── authentication/ # Login/Signup views
+│   │   ├── add_employee.html
+│   │   ├── dashboard.html
+│   │   ├── edit_employee.html
+│   │   └── ffr.html        # Filling Factor Ratio tracking
+│   ├── admin.py            # Admin portal configuration
+│   ├── models.py           # Database models (Employee, FFR data)
+│   ├── urls.py             # App-level routing
+│   └── views.py            # Business logic & FFR calculations
+├── media/                  # User-uploaded files (resumes/docs)
+├── server/                 # Server-specific configurations (WSGI/ASGI)
+├── static/                 # CSS, JS, and Image assets
+├── staticfiles/            # Collected static files for production
+├── manage.py               # Django CLI
+├── requirements.txt        # Project dependencies
+└── .env                    # Environment variables
 
-🛡️ Data Integrity Guard – Advanced backend logic in views.py that automatically identifies and clears redundant records during submission to prevent database conflicts.
 
-🕹️ Moveable Dual-Axis Grid – Custom-engineered layout featuring vertical sticky headers and a horizontal sticky designation column for seamless navigation.
+🚀 Key Features
 
-🔐 Multi-Site Authorization – Automated site-locking based on Username and Email credentials to ensure data isolation.
+FFR Tracking: Real-time calculation and visualization of the Filling Factor Ratio to monitor manpower efficiency across sites.
 
-📈 Professional Reporting – Automated Excel exports with multi-row merged headers matching industrial compliance standards.
+Employee Management: Full CRUD (Create, Read, Update, Delete) capabilities for handling the workforce lifecycle.
 
-Technical Insights
+Secure Authentication: Dedicated module for role-based access to sensitive HR data.
 
-Unified Site Logic – Streamlined handling for complex industrial clusters by consolidating multiple AGNI sub-units into a single common management interface.
+Dashboard Analytics: Centralized hub for operational summaries and manpower distribution.
 
-Cloud Infrastructure – High-security document hosting using AWS S3 with Signed URLs for resumes and offer letters.
+🛠️ Tech Stack
 
-Memory Optimization – Configured to handle high-density form submissions (up to 2500 fields) to prevent server timeouts on low-memory environments.
+Framework: Django (Python)
 
-Interactive Analytics – Live dashboard statistics providing granular visibility into hiring stages: Selected, Offered, Joined, Rejected, and Resigned.
+Styling: Tailwind CSS / HTML5
 
-Tech Stack
+Infrastructure & Cloud (AWS):
 
-Backend: Python 3.12, Django Framework
+AWS EC2: Scalable compute capacity hosting the Django application instance.
 
-Frontend: Tailwind CSS 3.x, Vanilla JavaScript, Lucide Icons
+AWS RDS: Managed relational database service (PostgreSQL/MySQL) for secure and reliable data persistence.
 
-Database: PostgreSQL (Production), SQLite (Development)
+AWS S3: Object storage used for hosting media files (resumes, documents) and static assets.
 
-Storage: AWS S3 (Signed Media Delivery)
+Deployment Architecture:
 
-Deployment: Vercel (CI/CD Pipeline)
+cPanel (Production): The primary professional environment for backend management and Python WSGI application hosting.
 
-Static Assets: WhiteNoise Middleware
+Vercel (Reference/Frontend): Utilized as a reference deployment for frontend components and edge-based delivery.
 
-Conclusion
+⚙️ Local Installation
 
-The project demonstrates a production-ready solution for complex industrial manpower management. By combining robust Django security with a high-performance frontend grid, it provides a "Single Source of Truth" for attendance and recruitment across distributed geographical locations.
+Clone the repository:
 
-Developed for Bright Tech Industrials India Pvt Ltd.
+git clone <your-repo-url>
+cd DMRM
+
+
+Set up virtual environment:
+
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+
+Install dependencies:
+
+pip install -r requirements.txt
+
+
+Environment Variables:
+Create a .env file and add your production credentials, including AWS access keys and database host information.
+
+Run Migrations & Start Server:
+
+python manage.py migrate
+python manage.py runserver
+
+
+🌐 Deployment Configuration
+
+cPanel & AWS (Professional Backend)
+
+Python App: Configured via the cPanel "Setup Python App" tool, interfaced with an AWS EC2 instance for stable production uptime.
+
+WSGI: The entry point is mapped to server/wsgi.py.
+
+Database (RDS): The application connects to an AWS RDS instance for high availability and automated backups.
+
+Storage (S3): All media uploads and static files are offloaded to AWS S3 buckets, ensuring persistence and fast content delivery.
+
+Vercel (Reference Deployment)
+
+Deployment: Integrated with GitHub for continuous staging and reference testing.
+
+Optimization: Used to benchmark frontend performance and ensure high availability for the UI layer.
